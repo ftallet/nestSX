@@ -1,0 +1,12 @@
+---
+# example: sudo ansible-playbook config-nsx.yml -e @lab1.yml
+
+- name: configure NSX
+  hosts: localhost
+  gather_facts: False
+  tasks:
+     - import_tasks: playbooks/100-deployNSXManager.yml
+     - import_tasks: playbooks/110-installLicense.yml   
+     - import_tasks: playbooks/120-registerComputeManager.yml
+     - import_tasks: playbooks/130-generalNSXConfig.yml   
+     - import_tasks: playbooks/140-deployEdges.yml   

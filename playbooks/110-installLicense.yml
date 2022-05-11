@@ -1,0 +1,14 @@
+---
+  - name: get licenses from .licenses file
+    include_vars:
+      file:               "{{ licenses_file }}"
+      name:               licenses
+      
+  - name: install license
+    vmware.ansible_for_nsxt.nsxt_licenses:
+        hostname:         "{{ nsxapp.ip }}"
+        username:         "{{ nsxapp.user }}"
+        password:         "{{ nsxapp.password }}"
+        license_key:      "{{ licenses.nsx }}"
+        state:            'present'
+        validate_certs:   False 

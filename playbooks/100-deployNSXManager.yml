@@ -1,0 +1,44 @@
+---
+  - name: Deploy the NSX Manager to a vCenter environment
+    vmware_deploy_ovf:
+      hostname:                   '{{ infra_vcenter.fqdn }}'
+      username:                   '{{ infra_vcenter.user }}'
+      password:                   '{{ infra_vcenter.password }}'
+      name:                       '{{ nsxapp.fqdn }}'
+      ovf:                        '{{ nsx_ova }}'
+      wait_for_ip_address:        true
+      validate_certs:             no
+      inject_ovf_env:             true
+      power_on:                   yes
+      datastore:                  '{{ datastore }}'
+      datacenter:                 '{{ infra_vcenter.dc }}'
+      cluster:                    '{{ infra_vcenter.cluster }}'
+      deployment_option:          "{{ nsxapp.size }}"
+      networks: 
+        "Network 1": "{{ mgmt_pg }}"
+      properties:
+        nsx_allowSSHRootLogin:    yes
+        nsx_cli_audit_passwd_0:   '{{ nsxapp.password }}'
+        nsx_cli_audit_username:   'audit'
+        nsx_cli_passwd_0:         '{{ nsxapp.password }}'
+        nsx_cli_username:         '{{ nsxapp.user }}'
+        nsx_dns1_0:               '{{ nsxapp.dns }}'
+        nsx_domain_0:             '{{ nsxapp.domain }}'
+        nsx_gateway_0:            '{{ nsxapp.gw }}'
+        nsx_hostname:             '{{ nsxapp.fqdn }}'
+        nsx_ip_0:                 '{{ nsxapp.ip }}'
+        nsx_isSSHEnabled:         True
+        nsx_netmask_0:            '{{ nsxapp.mask }}'
+        nsx_ntp_0:                '{{ nsxapp.dns }}'
+        nsx_passwd_0:             '{{ nsxapp.password }}'
+        nsx_role:                 "{{ nsxapp.role }}"
+      
+  - name: Check manager status
+    vmware.ansible_for_nsxt.nsxt_manager_status:
+      hostname:                   "{{ nsxapp.ip }}"
+      username:                   "{{ nsxapp.user }}"
+      password:                   "{{ nsxapp.password }}"
+      validate_certs:             False
+      wait_time:                  50
+
+

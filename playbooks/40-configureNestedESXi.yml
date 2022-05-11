@@ -1,0 +1,463 @@
+---
+- name: Change vESXi hostnames
+  vmware_vm_shell:
+    hostname:             "{{ infra_vcenter.ip }}"
+    username: "{{ infra_vcenter.user }}"
+    password: "{{ infra_vcenter.password }}"
+    datacenter: "{{ infra_vcenter.dc }}"
+    validate_certs: false
+    vm_id: "{{ item.value.fqdn }}"
+    vm_username: "{{ root }}"
+    vm_password: "{{ password }}"
+    vm_shell: /bin/esxcli
+    vm_shell_args: "system hostname set --fqdn={{ item.value.fqdn }}"
+    vm_shell_env:
+    - "PATH=/bin"
+    - "VAR=test"
+    vm_shell_cwd: "/tmp"
+  with_dict: "{{ vESX }}"
+  async: 7200
+  poll: 0
+  register: hname
+- name: Result check for configuring hostname
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  with_items: "{{ hname.results }}"
+  retries: 10
+
+- name: Set VLAN to Management portgroup
+  vmware_vm_shell:
+    hostname: "{{ infra_vcenter.ip }}"
+    username: "{{ infra_vcenter.user }}"
+    password: "{{ infra_vcenter.password }}"
+    datacenter: "{{ infra_vcenter.dc }}"
+    validate_certs: false
+    vm_id: "{{ item.value.fqdn }}"
+    vm_username: root
+    vm_password: "{{ password }}"
+    vm_shell: /bin/esxcli
+    vm_shell_args: "network vswitch standard portgroup set --portgroup-name='Management Network' --vlan-id={{ item.value.vlan }}"
+    vm_shell_env: 
+    - "PATH=/bin"
+    - "VAR=test"
+    vm_shell_cwd: "/tmp"
+  with_dict: "{{ vESX }}"
+  async: 7200
+  poll: 0
+  register: hvlan
+- name: Result check for setting VLAN
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  with_items: "{{ hvlan.results }}"
+  retries: 10
+
+- name: Set vmk0 ip addresses
+  vmware_vm_shell:
+    hostname: "{{ infra_vcenter.ip }}"
+    username: "{{ infra_vcenter.user }}"
+    password: "{{ infra_vcenter.password }}"
+    datacenter: "{{ infra_vcenter.dc }}"
+    validate_certs: false
+    vm_id: "{{ item.value.fqdn }}"
+    vm_username: root
+    vm_password: "{{ password }}"
+    vm_shell: /bin/esxcli
+    vm_shell_args: "network ip interface ipv4 set --interface-name=vmk0 --ipv4={{ item.value.ip }} --netmask={{ item.value.mask }} --type=static"
+    vm_shell_env: 
+    - "PATH=/bin"
+    - "VAR=test"
+    vm_shell_cwd: "/tmp"
+  with_dict: "{{ vESX }}"
+  async: 7200
+  poll: 0
+  register: hip
+- name: Result check for setting vmk0 ip addresses
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  with_items: "{{ hip.results }}"
+  retries: 10
+
+- name: Set default gw
+  vmware_vm_shell:
+    hostname: "{{ infra_vcenter.ip }}"
+    username: "{{ infra_vcenter.user }}"
+    password: "{{ infra_vcenter.password }}"
+    datacenter: "{{ infra_vcenter.dc }}"
+    validate_certs: false
+    vm_id: "{{ item.value.fqdn }}"
+    vm_username: root
+    vm_password: "{{ password }}"
+    vm_shell: /bin/esxcfg-route
+    vm_shell_args: " -a default {{ item.value.gw }}"
+    vm_shell_env: 
+    - "PATH=/bin"
+    - "VAR=test"
+    vm_shell_cwd: "/tmp"
+  with_dict: "{{ vESX }}"
+  async: 7200
+  poll: 0
+  register: hgw
+- name: Result check for setting default gw
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  with_items: "{{ hgw.results }}"
+  retries: 10
+
+- name: Set search domain
+  vmware_vm_shell:
+    hostname: "{{ infra_vcenter.ip }}"
+    username: "{{ infra_vcenter.user }}"
+    password: "{{ infra_vcenter.password }}"
+    datacenter: "{{ infra_vcenter.dc }}"
+    validate_certs: false
+    vm_id: "{{ item.value.fqdn }}"
+    vm_username: root
+    vm_password: "{{ password }}"
+    vm_shell: /bin/esxcli
+    vm_shell_args: "network ip dns search add --domain={{ domain}}"
+    vm_shell_env: 
+    - "PATH=/bin"
+    - "VAR=test"
+    vm_shell_cwd: "/tmp"
+  with_dict: "{{ vESX }}"
+  async: 7200
+  poll: 0
+  register: hsd
+- name: Result check for setting a search domain
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  with_items: "{{ hsd.results }}"
+  retries: 10
+
+- name: Set a DNS Server
+  vmware_vm_shell:
+    hostname: "{{ infra_vcenter.ip }}"
+    username: "{{ infra_vcenter.user }}"
+    password: "{{ infra_vcenter.password }}"
+    datacenter: "{{ infra_vcenter.dc }}"
+    validate_certs: false
+    vm_id: "{{ item.value.fqdn }}"
+    vm_username: root
+    vm_password: "{{ password }}"
+    vm_shell: /bin/esxcli
+    vm_shell_args: "network ip dns server add --server={{ dns }}"
+    vm_shell_env: 
+    - "PATH=/bin"
+    - "VAR=test"
+    vm_shell_cwd: "/tmp"
+  with_dict: "{{ vESX }}"
+  async: 7200
+  poll: 0
+  register: hdns
+- name: Result check for setting a DNS Server
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  with_items: "{{ hdns.results }}"
+  retries: 10
+
+- name: Disable SSH Warnings
+  vmware_vm_shell:
+    hostname: "{{ infra_vcenter.ip }}"
+    username: "{{ infra_vcenter.user }}"
+    password: "{{ infra_vcenter.password }}"
+    datacenter: "{{ infra_vcenter.dc }}"
+    validate_certs: false
+    vm_id: "{{ item.value.fqdn }}"
+    vm_username: root
+    vm_password: "{{ password }}"
+    vm_shell: /bin/vim-cmd
+    vm_shell_args: "hostsvc/advopt/update UserVars.SuppressShellWarning long 1"
+    vm_shell_env: 
+    - "PATH=/bin"
+    - "VAR=test"
+    vm_shell_cwd: "/tmp"
+  with_dict: "{{ vESX }}"
+  async: 7200
+  poll: 0
+  register: hwrn
+- name: Result check for setting disabling SSH warnings
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  with_items: "{{ hwrn.results }}"
+  retries: 10
+
+# The hosts are added to the newly created lab vcsa, not the infra vcsa
+- name: Add vESXi Host to VCSA
+  vmware_host:                         # was vmware_host27 -> typo, or special version ?
+    hostname: "{{ vcenter.ip }}"
+    username: "{{ vcenter.user }}"
+    password: "{{ vcenter.password }}"
+    datacenter_name: "{{ vcenter.dc }}"
+    validate_certs: false
+    cluster_name: "{{ item.value.cluster }}"
+    esxi_hostname: "{{ item.value.fqdn }}"
+    esxi_username: "root"
+    esxi_password: "{{ password }}"
+    state: present
+  with_dict: "{{ vESX }}"
+  async: 7200
+  poll: 0
+  register: haddvesxi
+- name: Result check for adding vESXi hosts
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  with_items: "{{ haddvesxi.results }}"
+  retries: 10
+
+- name: Create vMotion Portgroup
+  vmware_portgroup:
+    hostname: "{{ vcenter.ip }}"
+    username: "{{ vcenter.user }}"
+    password: "{{ vcenter.password }}"
+    switch_name: "vSwitch0"
+    portgroup_name: "vMotion-pg"
+    vlan_id: "{{ vmotion_vlan }}"
+    hosts: "{{ item.value.fqdn}}" 
+    validate_certs: False
+  with_dict: "{{ vESX }}"
+  async: 7200
+  poll: 0
+  register: hvmot
+- name: Result check for create vMotion pg
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  with_items: "{{ hvmot.results }}"
+  retries: 10
+
+- name: Create vMotion Portgroup dedicated to vmk1
+  vmware_portgroup:
+    hostname: "{{ vcenter.ip }}"
+    username: "{{ vcenter.user }}"
+    password: "{{ vcenter.password }}"
+    switch_name: "vSwitch0"
+    portgroup_name: "vMotion"
+    vlan_id: "{{ vmotion_vlan }}"
+    hosts: "{{ item.value.fqdn}}" 
+    validate_certs: False
+  with_dict: "{{ vESX }}"
+  async: 7200
+  poll: 0
+  register: hvmotpg
+- name: Result check for Create vMotion Portgroup dedicated to vmk1
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  with_items: "{{ hvmotpg.results }}"
+  retries: 10
+
+- name: Create vMotion vmk1
+  vmware_vmkernel:
+    hostname: "{{ vcenter.ip }}"
+    esxi_hostname: "{{ item.value.fqdn}}" 
+    username: "{{ infra_vcenter.user }}"
+    password: "{{ infra_vcenter.password }}"
+    vswitch_name: "vSwitch0"
+    portgroup_name: "vMotion" # need to make sure the port group exists
+    validate_certs: False
+    network:  # new syntax for network 
+      type: static
+      ip_address: "{{ item.value.vmotion_ip }}"
+      subnet_mask: "{{ vmotion_mask }}"
+    enable_vmotion: True
+  with_dict: "{{ vESX }}"
+  async: 7200
+  poll: 0
+  register: hvmk1
+- name: Result check for Create vMotion vmk1
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  with_items: "{{ hvmk1.results }}"
+  retries: 10
+
+- name: Create management Portgroup
+  vmware_portgroup:
+    hostname: "{{ vcenter.ip }}"
+    username: "{{ vcenter.user }}"
+    password: "{{ vcenter.password }}"
+    switch_name: "vSwitch0"
+    portgroup_name: "{{ mgmt_pg }}-pg"
+    vlan_id: "{{ mgmt_vlan }}"
+    hosts: "{{ item.value.fqdn}}" 
+    validate_certs: False
+  with_dict: "{{ vESX }}"
+  async: 7200
+  poll: 0
+  register: hmgmtpg
+- name: Result check for Create management Portgroup
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: job_result
+  until: job_result.finished
+  with_items: "{{ hmgmtpg.results }}"
+  retries: 10
+
+- name: Create VDS "{{ vcenter.vds }}" on vcenter 
+  community.vmware.vmware_dvswitch:
+    hostname: '{{ vcenter.ip }}'
+    username: '{{ vcenter.user }}'
+    password: '{{ vcenter.password }}'
+    datacenter: '{{ vcenter.dc }}'
+    switch:   "{{ vcenter.vds }}"
+    mtu:      "{{ mtu }}"
+    uplink_quantity: '2'
+    discovery_protocol: lldp
+    discovery_operation: both
+    state: present    
+    validate_certs: False
+
+- name: Create management DVPortgroup "{{mgmt_pg}}-dvpg"
+  community.vmware.vmware_dvs_portgroup:
+    hostname:       "{{ vcenter.ip }}"
+    username:       "{{ vcenter.user }}"
+    password:       "{{ vcenter.password }}"
+    validate_certs: false
+    portgroup_name: "{{ mgmt_pg }}-dvpg"
+    vlan_id:        "{{ mgmt_vlan}}"
+    switch_name:    "{{ vcenter.vds }}"
+    num_ports:      120
+    portgroup_type: 'ephemeral'
+    state: present
+
+- name: Create vMotion DVPortgroup "vMotion-dvpg"
+  community.vmware.vmware_dvs_portgroup:
+    hostname:       "{{ vcenter.ip }}"
+    username:       "{{ vcenter.user }}"
+    password:       "{{ vcenter.password }}"
+    validate_certs: false
+    portgroup_name: "vMotion-dvpg"
+    vlan_id:        "{{ vmotion_vlan}}"
+    switch_name:    "{{ vcenter.vds }}"
+    num_ports:      120
+    portgroup_type: 'ephemeral'
+    state: present
+
+- name: "Add vESX host to the VDS {{ vcenter.vds }} in {{ vcenter.fqdn }}"
+  community.vmware.vmware_dvs_host:
+    hostname: '{{ vcenter.ip }}'
+    username: '{{ vcenter.user }}'
+    password: '{{ vcenter.password }}'
+    esxi_hostname: '{{ item.value.fqdn }}'
+    switch_name: "{{ vcenter.vds }}"
+    vmnics:
+        - "vmnic1"
+        - "vmnic2"
+    state: present
+    validate_certs: False  # concurrency not welcome here
+  with_dict: "{{ vESX }}"
+
+
+# the infra vESXis are configured with two VSS, each with an isolated portgroup that "looks" 
+# like a physical link: promiscuous, 9k MTU, trunking etc.
+# They will be used to attach an edge to a virtual router
+- name: Create vSwitch1 vss (with no uplink)
+  community.vmware.vmware_vswitch:
+    hostname: '{{ item.fqdn }}'
+    username: '{{ root }}'
+    password: '{{ password }}'
+    switch: "vSwitch1"
+    mtu: 9000
+    validate_certs: False
+  with_items: "{{ vESX.values() | selectattr('cluster','==', infra_cluster ) }}"  
+  # async: 7200
+  # poll: 0
+  register: hu1
+# - name: Result check for Create vSwitch1 vss 
+#   async_status:
+#     jid: "{{ item.ansible_job_id }}"
+#   register: job_result
+#   until: job_result.finished
+#   with_items: "{{ hu1.results }}"
+#   retries: 10
+
+- name: Create link1 Portgroup on vSwitch1
+  vmware_portgroup:
+    hostname: "{{ vcenter.ip }}"
+    username: "{{ vcenter.user }}"
+    password: "{{ vcenter.password }}"
+    switch_name: "vSwitch1"
+    portgroup_name: "link1"
+    vlan_id: 4095
+    hosts: "{{ item.fqdn}}" 
+    security:
+        promiscuous_mode: true
+        mac_changes:      true
+        forged_transmits: true
+    validate_certs: False
+  with_items: "{{ vESX.values() | selectattr('cluster','==', infra_cluster ) }}"  
+  # async: 7200
+  # poll: 0
+  register: hu1pg
+# - name: Result check for Create uplink Portgroup on vSwitch1
+#   async_status:
+#     jid: "{{ item.ansible_job_id }}"
+#   register: job_result
+#   until: job_result.finished
+#   with_items: "{{ hu1pg.results }}"
+#   retries: 10
+
+- name: Create vSwitch2 vss (with no uplink)
+  community.vmware.vmware_vswitch:
+    hostname: '{{ item.fqdn }}'
+    username: '{{ root }}'
+    password: '{{ password }}'
+    switch: "vSwitch2"
+    mtu: 9000
+    validate_certs: False
+  with_items: "{{ vESX.values() | selectattr('cluster','==', infra_cluster ) }}"  
+  # async: 7200
+  # poll: 0
+  register: hu2
+# - name: Result check for Create vSwitch2 vss
+#   async_status:
+#     jid: "{{ item.ansible_job_id }}"
+#   register: job_result
+#   until: job_result.finished
+#   with_items: "{{ hu2.results }}"
+#   retries: 10
+
+- name: Create link2 Portgroup on vSwitch2
+  vmware_portgroup:
+    hostname: "{{ vcenter.ip }}"
+    username: "{{ vcenter.user }}"
+    password: "{{ vcenter.password }}"
+    switch_name: "vSwitch2"
+    portgroup_name: "link2"
+    vlan_id: 4095
+    hosts: "{{ item.fqdn}}" 
+    security:
+        promiscuous_mode: true
+        mac_changes:      true
+        forged_transmits: true
+    validate_certs: False
+  with_items: "{{ vESX.values() | selectattr('cluster','==', infra_cluster ) }}"  
+  # async: 7200
+  # poll: 0
+  register: hu2pg
+# - name: Result check for Create linjk2 Portgroup on vswitch2
+#   async_status:
+#     jid: "{{ item.ansible_job_id }}"
+#   register: job_result
+#   until: job_result.finished
+#   with_items: "{{ hu2pg.results }}"
+#   retries: 10  

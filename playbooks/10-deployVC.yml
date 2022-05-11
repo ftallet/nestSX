@@ -1,0 +1,65 @@
+---
+  - name: Mount VC installer
+    action: mount name='/mnt/VCSA' src="{{ vcIso }}" opts=loop fstype=iso9660 state=mounted
+    tags: mount
+    
+  - name: Create JSON template file for VCSA 6.7 with embeded PSC
+    template: 
+      src=../templates/vCSA67_on_VC.json
+      dest=/tmp/vCSA_on_VC.json
+    when: 
+      - vcIso is search("-6.7.")
+
+  - name: Create JSON template file for VCSA 7.0 with embeded PSC
+    template: 
+      src=../templates/vCSA70_on_VC.json
+      dest=/tmp/vCSA_on_VC.json
+    when: 
+      - vcIso is search("-7.0.")
+
+  - debug:
+      msg: "Next step will take about 20 minutes if VC has not been previously deployed, so go grab some coffee !!!"
+
+  - name: Perform VC CLI Install 67
+    command: "./vcsa-deploy install --accept-eula --no-ssl-certificate-verification /tmp/vCSA_on_VC.json"
+    args:
+      chdir: /mnt/VCSA/vcsa-cli-installer/lin64/
+    when: vcIso is search("-6.7.")
+    register: vc67deploy
+    ignore_errors: True
+
+  - name: Perform VC CLI Install 70
+    command: "./vcsa-deploy install --accept-eula --no-ssl-certificate-verification /tmp/vCSA_on_VC.json"
+    args:
+      chdir: /mnt/VCSA/vcsa-cli-installer/lin64/
+    when: vcIso is search("-7.0.")
+    register: vc70deploy
+    ignore_errors: True
+
+  - name: Unmount VCSA installer
+    action: mount name='/mnt/VCSA' src="{{ esxIso }}" fstype=iso9660 state=absent
+  - name: Delete the temporary JSON template file
+    file: path=/tmp/vCSA_on_VC.json state=absent
+  - name: Create Datacenter
+    vmware_datacenter:
+      hostname: "{{ vcenter.ip }}"
+      username: "{{ vcenter.user }}"
+      password: "{{ vcenter.password }}"
+      datacenter_name: "{{ vcenter.dc }}"
+      state: present
+      validate_certs: False
+      
+  - name: Create User-Defined Clusters
+    vmware_cluster:
+      hostname: "{{ vcenter.ip }}"
+      username: "{{ vcenter.user }}"
+      password: "{{ vcenter.password }}"
+      datacenter_name: "{{ vcenter.dc }}"
+      cluster_name: "{{ item.value.name }}"
+      validate_certs: False
+    with_dict: "{{ vcenter.clusters }}"
+
+
+
+
+

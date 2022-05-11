@@ -1,0 +1,166 @@
+---
+  - name: Create transport zones
+    vmware.ansible_for_nsxt.nsxt_transport_zones:
+      hostname:                     "{{ nsxapp.ip }}"
+      username:                     "{{ nsxapp.user }}"
+      password:                     "{{ nsxapp.password }}"
+      validate_certs:               False
+      resource_type:                "TransportZone"
+      display_name:                 "{{ item.value.display_name }}"
+      transport_type:               "{{ item.value.transport_type }}"
+      state:                        "{{ item.value.state }}"
+    with_dict:
+      - "{{ transport_zones }}"
+
+  - name: Create a unique IP pool for all TEPs  
+    vmware.ansible_for_nsxt.nsxt_ip_pools:
+      hostname:                     "{{ nsxapp.ip }}"
+      username:                     "{{ nsxapp.user }}"
+      password:                     "{{ nsxapp.password }}"
+      validate_certs: False
+      display_name:                 "{{ TEP_Pool.display_name }}"
+      subnets:                      "{{ TEP_Pool.subnets }}"
+      state:                        "{{ TEP_Pool.state }}"
+    
+  # create mamangement and vmotion VLAN segments in the default vlan TZ
+  - name: Create management segment
+    vmware.ansible_for_nsxt.nsxt_policy_segment:
+      hostname:                     "{{ nsxapp.ip }}"
+      username:                     "{{ nsxapp.user }}"
+      password:                     "{{ nsxapp.password }}"
+      validate_certs:               False
+      display_name:                 "{{ mgmt_pg }}-seg"
+      vlan_ids:                     "{{ mgmt_vlan }}"
+      admin_state:                  "UP"
+      transport_zone_display_name:  "nsx-vlan-transportzone"
+      state:                        "present"
+
+  - name: Create vMotion segment
+    vmware.ansible_for_nsxt.nsxt_policy_segment:
+      hostname:                     "{{ nsxapp.ip }}"
+      username:                     "{{ nsxapp.user }}"
+      password:                     "{{ nsxapp.password }}"
+      validate_certs:               False
+      display_name:                 "vMotion-seg"
+      vlan_ids:                     "{{ vmotion_vlan }}"
+      admin_state:                  "UP"
+      transport_zone_display_name:  "nsx-vlan-transportzone"
+      state:                        "present"
+
+
+
+  - name: Create an Uplink Profile with 2 uplinks
+    vmware.ansible_for_nsxt.nsxt_uplink_profiles:
+      hostname:                     "{{ nsxapp.ip }}"
+      username:                     "{{ nsxapp.user }}"
+      password:                     "{{ nsxapp.password }}"
+      validate_certs: False
+      display_name:                 "uplinkProfile1"
+      mtu:                          1600
+      resource_type:                "UplinkHostSwitchProfile"
+      teaming:
+        active_list: 
+        - uplink_name:              "uplink-1"
+          uplink_type:              PNIC
+        - uplink_name:              "uplink-2"
+          uplink_type:              PNIC
+        policy:                     FAILOVER_ORDER
+      transport_vlan:               0
+      state:                        "present"
+
+
+  - name: Create NVDS TNP using vmnic3/4 and does not migrate vmks
+    vmware.ansible_for_nsxt.nsxt_transport_node_profiles: 
+      hostname:                     "{{ nsxapp.ip }}"
+      username:                     "{{ nsxapp.user }}"
+      password:                     "{{ nsxapp.password }}"
+      validate_certs:               False
+      resource_type:                "TransportNodeProfile"
+      display_name:                 "NVDS no vmk migration vmnic34"
+      description:                  "NVDS, no vmk migration (vmnic3/vmnic4)"
+      state:                        present
+      host_switch_spec:
+        resource_type:              "StandardHostSwitchSpec"
+        host_switches:
+        - host_switch_profiles:
+          - name:                   "uplinkProfile1"
+            type:                   "UplinkHostSwitchProfile"
+          host_switch_name:         "nvds"
+          host_switch_mode:         "STANDARD"
+          pnics:
+          - device_name:            "vmnic3"
+            uplink_name:            "uplink-1"
+          - device_name:            "vmnic4"
+            uplink_name:            "uplink-2"  
+          ip_assignment_spec:
+            resource_type:          "StaticIpPoolSpec"
+            ip_pool_name:           "TEP-Pool"
+          transport_zone_endpoints:
+            - transport_zone_name:  "nsx-overlay-transportzone" # default overlay TZ
+            - transport_zone_name:  "nsx-vlan-transportzone"    # default vlan TZ
+
+  - name: Create NVDS TNP using vmnic0/3 migrating vmk0/vmk1
+    vmware.ansible_for_nsxt.nsxt_transport_node_profiles: 
+      hostname:                     "{{ nsxapp.ip }}"
+      username:                     "{{ nsxapp.user }}"
+      password:                     "{{ nsxapp.password }}"
+      validate_certs:               False
+      resource_type:                "TransportNodeProfile"
+      display_name:                 "NVDS vnic03 with vmk migration"
+      description:                  "NVDS, using vmnic0/3 and migrating vmk1/2"
+      state:                        present
+      host_switch_spec:
+        resource_type:              "StandardHostSwitchSpec"
+        host_switches:
+        - host_switch_profiles:
+          - name:                   "uplinkProfile1"
+            type:                   "UplinkHostSwitchProfile"
+          host_switch_name:         "nvds"
+          host_switch_mode:         "STANDARD"
+          pnics:
+          - device_name:            "vmnic0"
+            uplink_name:            "uplink-1"
+          - device_name:            "vmnic3"
+            uplink_name:            "uplink-2"  
+          vmk_install_migration:
+          - device_name: vmk0
+            destination_network_name: "{{ mgmt_pg}}-seg"
+          - device_name: vmk1
+            destination_network_name: "vMotion-seg"
+          ip_assignment_spec:
+            resource_type:          "StaticIpPoolSpec"
+            ip_pool_name:           "TEP-Pool"
+          transport_zone_endpoints:
+            - transport_zone_name:  "nsx-overlay-transportzone" # default overlay TZ
+            - transport_zone_name:  "nsx-vlan-transportzone"    # default vlan TZ
+
+  # - name: Create VDS TNP using vmnic3/4 and does not migrate vmks --> right now vmware ansible is not able to do that!
+  #   vmware.ansible_for_nsxt.nsxt_transport_node_profiles: 
+  #     hostname:                     "{{ nsxapp.ip }}"
+  #     username:                     "{{ nsxapp.user }}"
+  #     password:                     "{{ nsxapp.password }}"
+  #     validate_certs:               False
+  #     resource_type:                "TransportNodeProfile"
+  #     display_name:                 "VDS no vmk migration vmnic12"
+  #     description:                  "VDS, no vmk migration (vmnic1/vmnic2)"
+  #     state:                        present
+  #     host_switch_spec:
+  #       resource_type:              "StandardHostSwitchSpec"
+  #       host_switches:
+  #       - host_switch_profiles:
+  #         - name:                   "uplinkProfile1"
+  #           type:                   "UplinkHostSwitchProfile"
+  #         host_switch_type:         "VDS"
+  #         host_switch_name:         "{{ vcenter.vds }}"
+  #         host_switch_mode:         "STANDARD"
+  #         pnics:
+  #         - device_name:            "Uplink 1" # VDS uplink name
+  #           uplink_name:            "uplink-1"
+  #         - device_name:            "Uplink 2"
+  #           uplink_name:            "uplink-2"  
+  #         ip_assignment_spec:
+  #           resource_type:          "StaticIpPoolSpec"
+  #           ip_pool_name:           "TEP-Pool"
+  #         transport_zone_endpoints:
+  #           - transport_zone_name:  "nsx-overlay-transportzone" # default overlay TZ
+  #           - transport_zone_name:  "nsx-vlan-transportzone"    # default vlan TZ  

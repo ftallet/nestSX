@@ -1,0 +1,16 @@
+---
+  - name: Register compute manager
+    vmware.ansible_for_nsxt.nsxt_fabric_compute_managers:
+        hostname:           "{{ nsxapp.ip }}"
+        username:           "{{ nsxapp.user }}"
+        password:           "{{ nsxapp.password }}"
+        validate_certs:     False
+        display_name:       "vCenter"
+        server:             "{{ vcenter.fqdn }}"
+        origin_type:        vCenter
+        credential:
+          credential_type:  UsernamePasswordLoginCredential
+          username:         "{{ vcenter.user }}"
+          password:         "{{ vcenter.password }}"
+        state:              present
+    register:               compute_manager

@@ -1,0 +1,50 @@
+---
+  - name: Deploy Nested vESXi VMs
+    nestedESXi:
+      vcenter:        "{{ infra_vcenter.ip }}"
+      vmname:         "{{ item.value.fqdn }}"
+      vcenter_user:   "{{ infra_vcenter.user }}"
+      vcenter_passwd: "{{ infra_vcenter.password }}" 
+      cluster:        "{{ infra_vcenter.cluster }}"
+      datastore:      "{{ datastore }}"
+      portgroup:      "{{ infra_vcenter.allvlans_pg }}"
+      cpucount:       "{{ item.value.cpu }}"
+      memory:         "{{ item.value.ram }}"
+      hdd:            "{{ item.value.hdd }}"
+      isopath:        "customISO/customESXi.iso"
+    with_dict:        "{{ vESX }}"
+    async:            7200    # asynchronous start of each task, max 7200 seconds
+    poll:             0       # run concurrently
+    register:         deployment
+
+  - name: Wait 3 seconds before start checking whether the hosts are ready
+    pause:            seconds=3
+
+  - name: Result check for deployment
+    async_status:
+      jid:            "{{ item.ansible_job_id }}"
+    register:         job_result
+    with_items:       "{{ deployment.results }}"
+
+  - name: Create a mark if there is a new vESX to deploy
+    file:             path=/tmp/newESXi state=touch owner=root group=root mode=0555
+    when:             item.stat is not defined
+    with_items:       "{{ job_result.results }}"
+  - stat:             path=/tmp/newESXi
+    register:         newESXi
+
+  - name: Wait 15 minutes before start checking wheter the hosts are ready
+    pause:            minutes=15
+    when:             newESXi.stat.exists == True
+
+  - name: Delete the temporary mark
+    file:             path=/tmp/newESXi state=absent
+
+  - name: Result check for deployment
+    async_status:
+      jid:            "{{ item.ansible_job_id }}"
+    register:         job_result
+    until:            job_result.finished
+    with_items:       "{{ deployment.results }}"
+    retries: 20
+

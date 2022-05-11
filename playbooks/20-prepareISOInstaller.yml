@@ -1,0 +1,60 @@
+---
+  - name: Ensure xorriso is intalled
+    package:
+      name:  xorriso
+      state: present
+
+  - name: Mount ESXi installer
+    action: mount name='/mnt/ESX' src="{{ esxIso }}" opts=loop fstype=iso9660 state=mounted
+
+  - name: Copy ISO files
+    copy: src=/mnt/ESX dest=/tmp/
+
+  - name: Unmount ESXi installer
+    action: mount name='/mnt/ESX' src="{{ esxIso }}" fstype=iso9660 state=absent
+# basically, it's all about installing a kickstart file in the ISO (check KS.CFG in templates) https://www.virtuallyghetto.com/page/138?wptouch_switchu003ddesktopu0026redirectu003d/
+# example ks.cfg https://docs.vmware.com/en/VMware-vSphere/6.7/com.vmware.esxi.install.doc/GUID-C3F32E0F-297B-4B75-8B3E-C28BD08680C8.html
+# options available: https://pubs.vmware.com/vsphere-50/index.jsp?topic=%2Fcom.vmware.vsphere.install.doc_50%2FGUID-C3F32E0F-297B-4B75-8B3E-C28BD08680C8.html
+#
+# Somehow, my iso has "kernelopt=cdromBoot runweasel instead of just runweasel --> blindly add the case here"
+# update with vSphere 7.0: now it's "runweasel cfromBoot" !
+
+  - name: Edit boot.cfg - 1
+    replace:
+      dest: /tmp/ESX/boot.cfg
+      regexp: 'kernelopt=cdromBoot runweasel'
+      replace: 'kernelopt=ks=file://etc/vmware/weasel/KS.CFG'
+
+  - name: Edit boot.cfg - 2
+    replace:
+      dest: /tmp/ESX/boot.cfg
+      regexp: 'kernelopt=runweasel cdromBoot'
+      replace: 'kernelopt=ks=file://etc/vmware/weasel/KS.CFG preferVmkLinux=TRUE'   
+
+  - name: Edit boot.cfg - 3
+    replace:
+      dest: /tmp/ESX/boot.cfg
+      regexp: 'kernelopt=runweasel'
+      replace: 'kernelopt=ks=file://etc/vmware/weasel/KS.CFG'
+
+  - name: insert customks.tgz in boot.cfg modules section
+    replace:
+      dest: /tmp/ESX/boot.cfg
+      regexp: 'imgpayld.tgz$'
+      replace: 'imgpayld.tgz --- /customks.tgz'
+
+  - name: copy customks.tgz
+    copy: src=../templates/customks.tgz dest=/tmp/ESX/
+  - name: Burn an ISO image
+    command: xorrisofs -relaxed-filenames -J -R -o /tmp/customESXi.iso -b isolinux.bin -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table /tmp/ESX/
+    args:
+      chdir: /tmp/ESX/
+
+  - name: Upload the ISO to the Datastore
+    vsphere_copy: hostname="{{ infra_vcenter.ip }}" username="{{ infra_vcenter.user }}" password="{{ infra_vcenter.password }}" src=/tmp/customESXi.iso datacenter="{{ infra_vcenter.dc }}" datastore="{{ datastore }}" path=/customISO/customESXi.iso validate_certs=False
+    tags: upload
+    
+  - name: Delete Temporary Directory
+    file:
+      path: /tmp/ESX/
+      state: absent

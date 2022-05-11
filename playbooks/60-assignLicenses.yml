@@ -1,0 +1,26 @@
+---
+
+- name: get licenses from .licenses file
+  include_vars:
+    file:           "{{ licenses_file }}"
+    name:           licenses
+
+- name: Assign vCenter license
+  vcenter_license:
+    hostname:       "{{ vcenter.ip }}"
+    username:       "{{ vcenter.user }}"
+    password:       "{{ vcenter.password }}"
+    license:        "{{ licenses.vcenter }}"
+    state:          present
+    validate_certs: False
+
+- name: Assign license to ESXi hosts
+  vcenter_license:
+    hostname:       "{{ vcenter.ip }}"
+    username:       "{{ vcenter.user }}"
+    password:       "{{ vcenter.password }}"
+    esxi_hostname:  "{{ item.value.fqdn }}"
+    license:        "{{ licenses.esxi }}"
+    state:          present
+    validate_certs: False
+  with_dict:        "{{ vESX }}" 

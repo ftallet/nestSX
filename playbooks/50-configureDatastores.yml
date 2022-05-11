@@ -1,0 +1,17 @@
+---
+  - name: Mount Datastores to ESXi Hosts
+    vmware_host_datastore:
+      datastore_name:   '{{ item[1]["name"] }}'
+      datastore_type:   nfs
+      esxi_hostname:    '{{ item[0]["fqdn"] }}' 
+      hostname:         "{{ vcenter.ip }}"
+      nfs_path:         '{{ item[1]["nfs_path"]}}'
+      nfs_server:       '{{ item[1]["nfs_server"]}}' 
+      password:         "{{ vcenter.password }}"
+      state:            present
+      username:         "{{ vcenter.user }}"
+      validate_certs:   false
+    with_nested: 
+      - "{{ vESX.values() | list}}"
+      - "{{ datastores }}"
+

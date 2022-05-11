@@ -1,0 +1,99 @@
+---
+  - name: Create data center "{{ infra_vcenter.dc }}" in infra vCenter
+    community.vmware.vmware_datacenter:
+      hostname:                 "{{ infra_vcenter.ip }}"
+      username:                 "{{ infra_vcenter.user }}"
+      password:                 "{{ infra_vcenter.password }}"
+      datacenter_name:          "{{ infra_vcenter.dc }}"
+      state:                    present
+      validate_certs:           false
+
+  - name: Create cluster "{{ infra_vcenter.cluster }}" for the local ESXi host
+    community.vmware.vmware_cluster:
+      hostname:                 "{{ infra_vcenter.ip }}"
+      username:                 "{{ infra_vcenter.user }}"
+      password:                 "{{ infra_vcenter.password }}"
+      datacenter_name:          "{{ infra_vcenter.dc }}"
+      cluster_name:             "{{ infra_vcenter.cluster }}"
+      validate_certs:           false
+
+  - name: Attach pESX host "{{ pESX.fqdn }}" to infra_vcenter
+    community.vmware.vmware_host:                        
+      hostname:                 "{{ infra_vcenter.ip }}"
+      username:                 "{{ infra_vcenter.user }}"
+      password:                 "{{ infra_vcenter.password }}"
+      cluster_name:             "{{ infra_vcenter.cluster }}"
+      datacenter_name:          "{{ infra_vcenter.dc }}"
+      validate_certs:           false
+      esxi_hostname:            "{{ pESX.fqdn }}"
+      esxi_username:            "{{ pESX.user }}"
+      esxi_password:            "{{ pESX.password }}"
+      state:                    present
+
+  - name: Create VDS "{{ infra_vcenter.vds }}" on infra_vcenter 
+    community.vmware.vmware_dvswitch:
+      hostname:                 '{{ infra_vcenter.ip }}'
+      username:                 '{{ infra_vcenter.user }}'
+      password:                 '{{ infra_vcenter.password }}'
+      datacenter:               '{{ infra_vcenter.dc }}'
+      switch:                   "{{ infra_vcenter.vds }}"
+      uplink_quantity:          '2'
+      discovery_protocol:       lldp
+      discovery_operation:      both
+      state:                    present    
+      validate_certs:           false
+
+  - name: Add pESX host {{ pESX.fqdn }}' to the VDS "{{ infra_vcenter.vds }}" in infra_vcenter
+    community.vmware.vmware_dvs_host:
+      hostname:                 '{{ infra_vcenter.ip }}'
+      username:                 '{{ infra_vcenter.user }}'
+      password:                 '{{ infra_vcenter.password }}'
+      esxi_hostname:            '{{ pESX.fqdn }}'
+      switch_name:              "{{ infra_vcenter.vds }}"
+      vmnics:
+          - "{{ pESX.vmnic }}"
+      state:                    present
+      validate_certs:           false
+
+  - name: Create Lab Management DVPortgroup "{{ mgmt_pg }}"
+    community.vmware.vmware_dvs_portgroup:
+      hostname:                 "{{ infra_vcenter.ip }}"
+      username:                 "{{ infra_vcenter.user }}"
+      password:                 "{{ infra_vcenter.password }}"
+      validate_certs:           false
+      portgroup_name:           "{{ mgmt_pg }}"
+      vlan_id:                  "{{ mgmt_vlan}}"
+      switch_name:              "{{ infra_vcenter.vds }}"
+      num_ports:                120
+      portgroup_type:           'ephemeral'
+      state:                    present
+    register:                   Lab_pg
+
+  - name: Create AllVLANs DVPortgroup
+    community.vmware.vmware_dvs_portgroup:
+      hostname:                 "{{ infra_vcenter.ip }}"
+      username:                 "{{ infra_vcenter.user }}"
+      password:                 "{{ infra_vcenter.password }}"
+      validate_certs:           false
+      portgroup_name:           "{{ infra_vcenter.allvlans_pg}}"
+      vlan_trunk:               true
+      vlan_id:                  "0-4094"
+      switch_name:              "{{ infra_vcenter.vds }}"
+      num_ports:                120
+      portgroup_type:           'ephemeral'
+      mac_learning:
+        allow_unicast_flooding: True
+        enabled:                true
+        limit:                  4096
+        limit_policy:           allow
+      network_policy:
+        promiscuous:            false
+        forged_transmits:       true
+        mac_changes:            true     
+      state:                    present
+    register:                   Lab_pg
+
+
+
+
+

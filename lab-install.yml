@@ -1,0 +1,15 @@
+---
+
+
+
+- name: deploy nested lab
+  hosts: localhost
+  gather_facts: False
+  tasks:
+  - import_tasks: playbooks/00-configure-lab-VDS.yml 
+  - import_tasks: playbooks/10-deployVC.yml
+  - import_tasks: playbooks/20-prepareISOInstaller.yml
+  - import_tasks: playbooks/30-deployNestedESXi.yml
+  - import_tasks: playbooks/40-configureNestedESXi.yml
+  - import_tasks: playbooks/50-configureDatastores.yml
+  - import_tasks: playbooks/60-assignLicenses.yml

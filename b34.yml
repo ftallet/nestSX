@@ -1,0 +1,242 @@
+# sudo ansible-playbook lab-install.yml -e @b34.yml
+# sudo ansible-playbook nsx-install.yml -e @b34.yml
+
+
+esxIso:           '/home/francois/Downloads/VMware-VMvisor-Installer-7.0U3d-19482537.x86_64.iso'  # vSphere 7.0u3d GA
+vcIso:            '/home/francois/Downloads/VMware-VCSA-all-7.0.3-19480866.iso'                   # 7.0u3d GA
+nsx_ova:          '/home/francois/Downloads/nsx-unified-appliance-3.2.0.1.0.19232400.ova'         # impactor 3.2.0.1
+licenses_file:    '/home/francois/.licenses.yaml'                                                 # see .licenses.yaml template in "playbooks" directory
+
+# need to implement a vault
+
+
+# Global values that will be used everywhere by default
+password:         'VMware1!'
+longpass:         'VMware1!VMware1!'
+root:             'root'
+
+# infrastructure vCenter : 
+infra_vcenter:
+  user:           "administrator@ft.lab"
+  password:       "{{ password }}"    
+  fqdn:           'dl37-vcsa.ft.lab'
+  ip:             '10.114.221.163'
+  ## the following objects will be created if necessary
+  dc:             'ft-lab'    # global datacenter name in infra_vcenter
+  vds:            'LabVDS'    # VDS in infra_vcenter
+  cluster:        'b34-lab'   # the infra_vcenter cluster under which we're going to create our VMs
+  allvlans_pg:    'AllVLANs'  # portgroup on infra_vcenter where the virtual ESXis will be attached
+
+# site defines the local objects for the lab we're deploying on pESX
+dns:              '10.114.221.134' #'10.20.145.1'
+ntp:              '10.166.17.90'
+domain:           'ft.lab'
+admin:            "administrator@{{ domain }}"
+gw:               '10.174.113.253'
+mask:             '255.255.254.0'
+prefix:           '23'              # vcsa install wants a prefix len -> this corresponds to the "mask" above
+mgmt_pg:          'b-mgmt'    # prefix name for the management pg/dvpg
+mgmt_vlan:        '1647'      # VLAN ID of management network
+vmotion_vlan:     '162'             # vMotion vlan and network
+vmotion_mask:     '255.255.255.0'   # defined on ESXi hosts
+vmotion_gw:       '172.16.221.129'  # does not need portgroup
+datastore:        'b34' # datastore that will be used for the lab deployment
+nested_datastore: 'b-deployed' # name of the nfs datastore mounted on the nested vESXi
+cpu_small:        '2' 
+ram_small:        '16384' 
+cpu_large:        '4' 
+ram_large:        '32768'
+hdd:              '100' # 1 HDD 8GB by default where the ESXi  installed. Additional one is SSD emulated drive configured half of the value here, and third HDD is according the value here
+infra_cluster:    'Infra'
+mtu:              1700
+
+# the physical host on which the lab will be created
+pESX: 
+  fqdn:           'b34.ft.lab'    
+  ip:             '10.172.211.38'
+  vmnic:          'vmnic1'  # vmnic for the infra_vcenter VDS
+  ##
+  user:           "{{ root }}" 
+  password:       "{{ password }}" 
+
+# the site vCenter appliance that will be deployed on pESX
+vcenter: 
+  fqdn:           "b34-vcsa.ft.lab"
+  ip:             '10.174.113.68' # site vCenter ip address 
+  vds:            'b34-vds'   # site VDS
+  dc:             'b34-lab'   # name of the site data center we're creating
+  ##
+  prefix:         "{{ prefix }}"
+  gw:             "{{ gw }}"
+  dns:            "{{ dns }}"
+  user:           "{{ admin }}"
+  password:       "{{ password }}"
+  datastore:      "{{ datastore }}"       # local datastore name where the nested ESXi VMs will be deployed
+  domain:         "{{ domain }}"
+  # Clusters that will be created on the site data center
+  clusters: 
+    Infra:
+      name:       "{{ infra_cluster }}"
+    Compute1:
+      name:       "Compute1"
+    Compute2:
+      name:       "Compute2"
+
+# datastores that will be mounted on all the hosts (note: this is a list, not a dict)
+datastores:
+  - name:         'b-deployed'
+    nfs_server:   '10.174.113.250'
+    nfs_path:     '/NSBU-TKT5306355-1500GB-01/deployed'
+  - name:         'smurf'
+    nfs_server:   '10.114.221.134'
+    nfs_path:     '/nfs/export'
+
+# List of virtual ESXi hosts that will be deployed
+vESX:
+  esxi1:    
+    fqdn:         "b34-esxi1.{{ domain }}"
+    ip:           '10.174.113.74'
+    vmotion_ip:   '172.16.221.145' 
+    cluster:      'Compute1' 
+    ##
+    vlan:         "{{ mgmt_vlan }}"
+    mask:         "{{ mask }}"
+    gw:           "{{ gw }}"
+    cpu:          "{{ cpu_small }}"
+    ram:          "{{ ram_small }}" 
+    hdd:          "{{ hdd }}"
+
+  esxi2:    
+    fqdn:         "b34-esxi2.{{ domain }}"
+    ip:           '10.174.113.75'
+    vmotion_ip:   '172.16.221.146' 
+    cluster:      'Compute1' 
+    ##
+    vlan:         "{{ mgmt_vlan }}"
+    mask:         "{{ mask }}"
+    gw:           "{{ gw }}"
+    cpu:          "{{ cpu_small }}"
+    ram:          "{{ ram_small }}" 
+    hdd:          "{{ hdd }}"
+
+  esxi3:    
+    fqdn:         "b34-esxi3.{{ domain }}"
+    ip:           '10.174.113.76'
+    vmotion_ip:   '172.16.221.147' 
+    cluster:      'Compute2' 
+    ##
+    vlan:         "{{ mgmt_vlan }}"
+    mask:         "{{ mask }}"
+    gw:           "{{ gw }}"
+    cpu:          "{{ cpu_small }}"
+    ram:          "{{ ram_small }}" 
+    hdd:          "{{ hdd }}"
+
+  esxi4:    
+    fqdn:         "b34-esxi4.{{ domain }}"
+    ip:           '10.174.113.77'
+    vmotion_ip:   '172.16.221.148' 
+    cluster:      'Compute2' 
+    ##
+    vlan:         "{{ mgmt_vlan }}"
+    mask:         "{{ mask }}"
+    gw:           "{{ gw }}"
+    cpu:          "{{ cpu_small }}"
+    ram:          "{{ ram_small }}" 
+    hdd:          "{{ hdd }}"
+
+  infra_esxi1:    
+    fqdn:         "b34-esxi5.{{ domain }}"
+    ip:           '10.174.113.78'
+    vmotion_ip:   '172.16.221.149' 
+    cluster:      "{{ infra_cluster }}" 
+    ##
+    vlan:         "{{ mgmt_vlan }}"
+    mask:         "{{ mask }}"
+    gw:           "{{ gw }}"
+    cpu:          "{{ cpu_large }}"
+    ram:          "{{ ram_large }}" 
+    hdd:          "{{ hdd }}"
+
+  infra_esxi2:    
+    fqdn:         "b34-esxi6.{{ domain }}"
+    ip:           '10.174.113.79'
+    vmotion_ip:   '172.16.221.150' 
+    cluster:      "{{ infra_cluster }}"
+    ##
+    vlan:         "{{ mgmt_vlan }}"
+    mask:         "{{ mask }}"
+    gw:           "{{ gw }}"
+    cpu:          "{{ cpu_large }}"
+    ram:          "{{ ram_large }}" 
+    hdd:          "{{ hdd }}"
+
+## -----------------------------------------------------------------
+## NSX Information (probably wise to move to a different file later)
+## -----------------------------------------------------------------
+
+# careful: if the host on which the NSX manager is deployed is register in vCenter under an FQDN
+# the server running the script must have this FQDN in its DNS.
+nsxapp:
+  user:                       "admin"
+  password:                   "{{ longpass }}"
+  fqdn:                       "b34-nsxmgr.{{ domain }}"
+  ip:                         "10.174.113.70"
+  mask:                       "{{ mask }}"
+  gw:                         "{{ gw }}"
+  portgroup:                  "{{ mgmt_pg }}"
+  datastore:                  "{{ datastore }}"
+  path_to_ova:                ""
+  ova_file:                   "{{ nsx_ova }}"
+  size:                       "small"
+  dns:                        "{{ dns }}"
+  domain:                     "{{ domain }}"
+  role:                       "NSX Manager"
+ 
+transport_zones:
+  edge_uplink_vlan_TZ:
+    display_name:             "edge-uplink-VLAN-TZ"
+    description:              "DC VLAN TZ"
+    transport_type:           "VLAN" 
+    state:                    present
+
+TEP_Pool:   
+  display_name:               "TEP-Pool"
+  subnets:
+    - allocation_ranges:
+      - start:                "172.16.221.10"
+        end:                  "172.16.221.100"
+      gateway_ip:             "172.16.221.1"
+      cidr:                   "172.16.221.0/24"
+  state:                      present
+
+
+transport_nodes: 
+  edgenode_1:
+    name:                     "b34-edge1.ft.lab"
+    state:                    "present"
+    uplink1:                  "link1"      
+    uplink2:                  "link2"
+    ip:                       "10.174.113.72"
+    prefix_len:               "{{ prefix }}"
+    gw:                       "{{ gw }}"
+    host:                     "{{ vESX.infra_esxi1.fqdn }}" 
+    cluster:                  "{{ vESX.infra_esxi1.cluster }}"
+    storage:                  "{{ nested_datastore }}"
+  edgenode_2:
+    name:                     "b34-edge2.ft.lab"
+    state:                    "present"
+    uplink1:                  "link1"      
+    uplink2:                  "link2"
+    ip:                       "10.174.113.73"
+    prefix_len:               "{{ prefix }}"
+    gw:                       "{{ gw }}"
+    host:                     "{{ vESX.infra_esxi2.fqdn }}" 
+    cluster:                  "{{ vESX.infra_esxi2.cluster }}"
+    storage:                  "{{ nested_datastore }}"  
+
+edge_clusters:
+  - display_name:             "EdgeCluster"
+    members:
+      - transport_node_name:  "{{ transport_nodes.edgenode_1.name }}"
+      - transport_node_name:  "{{ transport_nodes.edgenode_2.name }}"

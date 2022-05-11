@@ -1,0 +1,86 @@
+---
+  - name: deploy edges
+    vmware.ansible_for_nsxt.nsxt_transport_nodes:
+      hostname:                     "{{ nsxapp.ip }}"
+      username:                     "{{ nsxapp.user }}"
+      password:                     "{{ nsxapp.password }}"
+      validate_certs: False
+      display_name:                 "{{ item.value.name }}"
+      host_switch_spec:
+        resource_type:              'StandardHostSwitchSpec'
+        host_switches: 
+        - host_switch_profiles: 
+          - name:                   "nsx-edge-multiple-vteps-uplink-profile"
+            type:                   "UplinkHostSwitchProfile"
+          - name:                   "LLDP [Send Packet Disabled]"
+            type:                   "LldpHostSwitchProfile"
+          host_switch_name:         "nvds"
+          pnics: 
+          - device_name:            "fp-eth0"
+            uplink_name:            "uplink-1"
+          - device_name:            "fp-eth1"
+            uplink_name:            "uplink-2"
+          ip_assignment_spec: 
+            resource_type:          "StaticIpPoolSpec"
+            ip_pool_name:           "TEP-Pool"
+          transport_zone_endpoints:
+            - transport_zone_name:  "{{ transport_zones.edge_uplink_vlan_TZ.display_name }}"
+            - transport_zone_name:  "nsx-overlay-transportzone"  
+      node_deployment_info:
+        node_settings:
+          hostname:                 "{{ item.value.name }}"
+          allow_ssh_root_login:     true
+          enable_ssh:               true
+        resource_type:              "EdgeNode"
+        display_name:               "{{ item.value.name }}"  
+        ip_addresses:
+        deployment_config:
+          form_factor:              "SMALL"
+          node_user_settings:
+            cli_password:           "{{ longpass }}"
+            root_password:          "{{ longpass }}"
+          vm_deployment_config:
+            placement_type:         VsphereDeploymentConfig
+            vc_name:                "vCenter" # name of a compute manager in nsx manager
+            vc_username:            "{{ vcenter.user }}"
+            vc_password:            "{{ vcenter.password }}"        
+            data_networks:
+            -                       "{{ item.value.uplink1 }}"
+            -                       "{{ item.value.uplink2}}"
+            management_network:     "{{ mgmt_pg }}-dvpg"
+            management_port_subnets:
+            - ip_addresses:
+              -                     "{{ item.value.ip }}"
+              prefix_length:        "{{ item.value.prefix_len }}"
+            default_gateway_addresses:
+              -                     "{{ item.value.gw }}"
+            compute:                "{{ item.value.cluster }}"
+            storage:                "{{ item.value.storage }}"
+            host:                   "{{ item.value.host }}"
+      state:                        "{{ item.value.state }}"
+    with_dict:
+      -                             '{{ transport_nodes }}'   
+    async:                          7200
+    poll:                           0
+    register:                       r_edges
+  - name: Result check for edge creation #https://docs.ansible.com/ansible/latest/user_guide/playbooks_async.html
+    async_status:
+      jid:                          "{{ item.ansible_job_id }}"
+    register:                       job_result
+    until:                          job_result.finished
+    with_items:                     "{{ r_edges.results }}"
+    delay:                          100
+    retries:                        100      
+
+  - name: Add edge cluster
+    vmware.ansible_for_nsxt.nsxt_edge_clusters:
+      hostname:                     "{{ nsxapp.ip }}"
+      username:                     "{{ nsxapp.user }}"
+      password:                     "{{ nsxapp.password }}"
+      validate_certs: False
+      display_name:                 "{{ item.display_name }}"
+      members:                      "{{ item.members }}"
+      state:                        "present"
+    with_items:
+      - "{{ edge_clusters }}"  
+
