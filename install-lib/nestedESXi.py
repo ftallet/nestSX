@@ -196,11 +196,15 @@ def create_vm(vmName, content, clusterName, datastore, portGroup, CPUs, memory, 
     disk_spec3 = create_virtual_disk(int(new_disk_kb), 0, 2, False)
 
     scsi_spec = add_scsi_controller()
-    nic0_spec = createNIC(content, portGroup, True)
-    nic1_spec = createNIC(content, portGroup, True)
-    nic2_spec = createNIC(content, portGroup, True)
-    nic3_spec = createNIC(content, portGroup, True)
-    nic4_spec = createNIC(content, portGroup, True)
+    # need to find out if portgroup is in fact a portgroup or a dvportgroup 
+    # note: I don't take opaque networks into account (lol)
+    isVDS = isinstance(get_obj(content,[vim.Network], portGroup),vim.dvs.DistributedVirtualPortgroup)
+
+    nic0_spec = createNIC(content, portGroup, isVDS)
+    nic1_spec = createNIC(content, portGroup, isVDS)
+    nic2_spec = createNIC(content, portGroup, isVDS)
+    nic3_spec = createNIC(content, portGroup, isVDS)
+    nic4_spec = createNIC(content, portGroup, isVDS)
 
     cdrom = createCdrom(content, datastore, dataStorePath)
     dev_changes.append(cdrom)

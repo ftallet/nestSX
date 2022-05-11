@@ -7,7 +7,7 @@
       vcenter_passwd: "{{ infra_vcenter.password }}" 
       cluster:        "{{ infra_vcenter.cluster }}"
       datastore:      "{{ datastore }}"
-      portgroup:      "{{ infra_vcenter.allvlans_pg }}"
+      portgroup:      "{{ allvlans }}"
       cpucount:       "{{ item.value.cpu }}"
       memory:         "{{ item.value.ram }}"
       hdd:            "{{ item.value.hdd }}"

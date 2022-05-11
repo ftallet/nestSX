@@ -379,16 +379,8 @@
     mtu: 9000
     validate_certs: False
   with_items: "{{ vESX.values() | selectattr('cluster','==', infra_cluster ) }}"  
-  # async: 7200
-  # poll: 0
-  register: hu1
-# - name: Result check for Create vSwitch1 vss 
-#   async_status:
-#     jid: "{{ item.ansible_job_id }}"
-#   register: job_result
-#   until: job_result.finished
-#   with_items: "{{ hu1.results }}"
-#   retries: 10
+- pause:
+    seconds: 5
 
 - name: Create link1 Portgroup on vSwitch1
   vmware_portgroup:
@@ -405,16 +397,8 @@
         forged_transmits: true
     validate_certs: False
   with_items: "{{ vESX.values() | selectattr('cluster','==', infra_cluster ) }}"  
-  # async: 7200
-  # poll: 0
-  register: hu1pg
-# - name: Result check for Create uplink Portgroup on vSwitch1
-#   async_status:
-#     jid: "{{ item.ansible_job_id }}"
-#   register: job_result
-#   until: job_result.finished
-#   with_items: "{{ hu1pg.results }}"
-#   retries: 10
+- pause:
+    seconds: 5
 
 - name: Create vSwitch2 vss (with no uplink)
   community.vmware.vmware_vswitch:
@@ -425,16 +409,8 @@
     mtu: 9000
     validate_certs: False
   with_items: "{{ vESX.values() | selectattr('cluster','==', infra_cluster ) }}"  
-  # async: 7200
-  # poll: 0
-  register: hu2
-# - name: Result check for Create vSwitch2 vss
-#   async_status:
-#     jid: "{{ item.ansible_job_id }}"
-#   register: job_result
-#   until: job_result.finished
-#   with_items: "{{ hu2.results }}"
-#   retries: 10
+- pause:
+    seconds: 5
 
 - name: Create link2 Portgroup on vSwitch2
   vmware_portgroup:
@@ -451,13 +427,3 @@
         forged_transmits: true
     validate_certs: False
   with_items: "{{ vESX.values() | selectattr('cluster','==', infra_cluster ) }}"  
-  # async: 7200
-  # poll: 0
-  register: hu2pg
-# - name: Result check for Create linjk2 Portgroup on vswitch2
-#   async_status:
-#     jid: "{{ item.ansible_job_id }}"
-#   register: job_result
-#   until: job_result.finished
-#   with_items: "{{ hu2pg.results }}"
-#   retries: 10  

@@ -69,13 +69,14 @@
       state:                    present
     register:                   Lab_pg
 
-  - name: Create AllVLANs DVPortgroup
+# create a global AllVLANs dvportgroup on the infra VDS 
+  - name: Create AllVLANs DVPortgroup "{{ infra_vcenter.allvlans_dvpg }}"
     community.vmware.vmware_dvs_portgroup:
       hostname:                 "{{ infra_vcenter.ip }}"
       username:                 "{{ infra_vcenter.user }}"
       password:                 "{{ infra_vcenter.password }}"
       validate_certs:           false
-      portgroup_name:           "{{ infra_vcenter.allvlans_pg}}"
+      portgroup_name:           "{{ infra_vcenter.allvlans_dvpg }}"
       vlan_trunk:               true
       vlan_id:                  "0-4094"
       switch_name:              "{{ infra_vcenter.vds }}"
@@ -93,7 +94,23 @@
       state:                    present
     register:                   Lab_pg
 
+# create a portgroup local to pESX for allvlans
+  - name: Create AllVLANs portgroup "{{ allvlans_pg }} on pESX 
+    community.vmware.vmware_portgroup:
+      hostname:                 "{{ infra_vcenter.ip }}"
+      username:                 "{{ infra_vcenter.user }}"
+      password:                 "{{ infra_vcenter.password }}"
+      switch_name:              "vSwitch0" # I'm assuming there's a vSwitch0 on pESX, that's wrong
+      portgroup_name:           "{{ allvlans_pg }}"
+      vlan_id:                  4095
+      hosts:                    "{{ pESX.fqdn }}"
+      security:
+        promiscuous_mode: true
+        mac_changes:      true
+        forged_transmits: true
+      validate_certs: False
 
-
-
-
+# try to optimize the horrible promiscuous mode previously configured by entering :
+#   esxcli system settings advanced set -o /Net/ReversePathFwdCheckPromisc -i 1
+# on the physical pESX host
+  

@@ -22,12 +22,17 @@ infra_vcenter:
   fqdn:           'dl37-vcsa.ft.lab'
   ip:             '10.114.221.163'
   ## the following objects will be created if necessary
-  dc:             'ft-lab'    # global datacenter name in infra_vcenter
-  vds:            'LabVDS'    # VDS in infra_vcenter
-  cluster:        'b34-lab'   # the infra_vcenter cluster under which we're going to create our VMs
-  allvlans_pg:    'AllVLANs'  # portgroup on infra_vcenter where the virtual ESXis will be attached
+  dc:             'ft-lab'                # global datacenter name in infra_vcenter
+  vds:            'LabVDS'                # VDS in infra_vcenter
+  cluster:        'b34-lab'               # the infra_vcenter cluster under which we're going to create our VMs
+  allvlans_dvpg:  'AllVLANs'              # infra_vcenter trunking dvportgroup with mac learning and all vlans allowed 
 
 # site defines the local objects for the lab we're deploying on pESX
+
+allvlans_pg:      'AllVLANs-pg'            # pESX local trunking portgroup with promiscuous enabled
+allvlans:         "{{ allvlans_pg }}"                  # attach vESX hosts to local pg with promiscuous
+#allvlans:         "{{ infra_vcenter.allvlans_dvpg }}"  # attach vESX hosts to infra dvpg
+ 
 dns:              '10.114.221.134' #'10.20.145.1'
 ntp:              '10.166.17.90'
 domain:           'ft.lab'
