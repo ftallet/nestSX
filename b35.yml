@@ -1,5 +1,5 @@
-# sudo ansible-playbook lab-install.yml -e @b34.yml
-# sudo ansible-playbook nsx-install.yml -e @b34.yml
+# sudo ansible-playbook lab-install.yml -e @b35.yml
+# sudo ansible-playbook nsx-install.yml -e @b35.yml
 
 
 esxIso:            '/home/francois/Downloads/VMware-VMvisor-Installer-201912001-15160138.x86_64.iso'  # 6.7 hopefully
@@ -7,7 +7,9 @@ esxIso:            '/home/francois/Downloads/VMware-VMvisor-Installer-201912001-
 vcIso:            '/home/francois/Downloads/VMware-VCSA-all-7.0.3-19480866.iso'                   # 7.0u3d GA
 #nsx_ova:          '/home/francois/Downloads/nsx-unified-appliance-3.1.3.7.0.19380482.ova'         # 3.1.3.7
 nsx_ova:          '/home/francois/Downloads/nsx-unified-appliance-3.2.1.0.0.19801963.ova'         # 3.2.1 GA
-licenses_file:    '/home/francois/.licenses.yaml'  
+
+licenses_file:    '/home/francois/.licenses.yaml'                                                 # see .licenses.yaml template in "playbooks" directory
+
 # need to implement a vault
 
 
@@ -25,15 +27,14 @@ infra_vcenter:
   ## the following objects will be created if necessary
   dc:             'ft-lab'                # global datacenter name in infra_vcenter
   vds:            'LabVDS'                # VDS in infra_vcenter
-  cluster:        'b34-lab'               # the infra_vcenter cluster under which we're going to create our VMs
+  cluster:        'b35-lab'               # the infra_vcenter cluster under which we're going to create our VMs
   allvlans_dvpg:  'AllVLANs'              # infra_vcenter trunking dvportgroup with mac learning and all vlans allowed 
 
 # site defines the local objects for the lab we're deploying on pESX
 
 allvlans_pg:      'AllVLANs-pg'            # pESX local trunking portgroup with promiscuous enabled
-# define allvlans as -1- or -2- below to define which (dv)portgroup vESX hosts will be attached to
-allvlans:         "{{ allvlans_pg }}"                  # -1- attach vESX hosts to local pg with promiscuous
-#allvlans:         "{{ infra_vcenter.allvlans_dvpg }}"  # -2- attach vESX hosts to infra dvpg
+allvlans:         "{{ allvlans_pg }}"                  # attach vESX hosts to local pg with promiscuous
+#allvlans:         "{{ infra_vcenter.allvlans_dvpg }}"  # attach vESX hosts to infra dvpg
  
 dns:              '10.114.221.134' #'10.20.145.1'
 ntp:              '10.166.17.90'
@@ -47,7 +48,7 @@ mgmt_vlan:        '1647'      # VLAN ID of management network
 vmotion_vlan:     '162'             # vMotion vlan and network
 vmotion_mask:     '255.255.255.0'   # defined on ESXi hosts
 vmotion_gw:       '172.16.221.129'  # does not need portgroup
-datastore:        'b34' # datastore that will be used for the lab deployment
+datastore:        'b35' # datastore that will be used for the lab deployment
 nested_datastore: 'b-deployed' # name of the nfs datastore mounted on the nested vESXi
 cpu_small:        '2' 
 ram_small:        '16384' 
@@ -60,8 +61,8 @@ esxi_license:     'license6'
 
 # the physical host on which the lab will be created
 pESX: 
-  fqdn:           'b34.ft.lab'    
-  ip:             '10.172.211.38'
+  fqdn:           'b35.ft.lab'    
+  ip:             '10.172.211.39'
   vmnic:          'vmnic1'  # vmnic for the infra_vcenter VDS
   ##
   user:           "{{ root }}" 
@@ -69,12 +70,13 @@ pESX:
 
 # the site vCenter appliance that will be deployed on pESX
 vcenter: 
-  fqdn:           "b34-vcsa.ft.lab"
-  ip:             '10.174.113.68' # site vCenter ip address 
-  vds:            'b34-vds'   # site VDS
+  fqdn:           "b35-vcsa.ft.lab"
+  ip:             '10.174.113.99' # site vCenter ip address 
+  vds:            'vds'   # site VDS
   vds_version:    '6.6.0' # if commented out, the VDS wersion will be the vCenter version.
-  dc:             'b34-lab'   # name of the site data center we're creating
+  dc:             'b35-lab'   # name of the site data center we're creating
   license:        "license7"
+
   ##
   prefix:         "{{ prefix }}"
   gw:             "{{ gw }}"
@@ -104,9 +106,9 @@ datastores:
 # List of virtual ESXi hosts that will be deployed
 vESX:
   esxi1:    
-    fqdn:         "b34-esxi1.{{ domain }}"
-    ip:           '10.174.113.74'
-    vmotion_ip:   '172.16.221.145' 
+    fqdn:         "b35-esxi1.{{ domain }}"
+    ip:           '10.174.113.105'
+    vmotion_ip:   '172.16.221.105' 
     cluster:      'Compute1' 
     ##
     vlan:         "{{ mgmt_vlan }}"
@@ -117,9 +119,9 @@ vESX:
     hdd:          "{{ hdd }}"
 
   esxi2:    
-    fqdn:         "b34-esxi2.{{ domain }}"
-    ip:           '10.174.113.75'
-    vmotion_ip:   '172.16.221.146' 
+    fqdn:         "b35-esxi2.{{ domain }}"
+    ip:           '10.174.113.106'
+    vmotion_ip:   '172.16.221.106' 
     cluster:      'Compute1' 
     ##
     vlan:         "{{ mgmt_vlan }}"
@@ -130,9 +132,9 @@ vESX:
     hdd:          "{{ hdd }}"
 
   esxi3:    
-    fqdn:         "b34-esxi3.{{ domain }}"
-    ip:           '10.174.113.76'
-    vmotion_ip:   '172.16.221.147' 
+    fqdn:         "b35-esxi3.{{ domain }}"
+    ip:           '10.174.113.107'
+    vmotion_ip:   '172.16.221.107' 
     cluster:      'Compute2' 
     ##
     vlan:         "{{ mgmt_vlan }}"
@@ -143,9 +145,9 @@ vESX:
     hdd:          "{{ hdd }}"
 
   esxi4:    
-    fqdn:         "b34-esxi4.{{ domain }}"
-    ip:           '10.174.113.77'
-    vmotion_ip:   '172.16.221.148' 
+    fqdn:         "b35-esxi4.{{ domain }}"
+    ip:           '10.174.113.108'
+    vmotion_ip:   '172.16.221.108' 
     cluster:      'Compute2' 
     ##
     vlan:         "{{ mgmt_vlan }}"
@@ -156,9 +158,9 @@ vESX:
     hdd:          "{{ hdd }}"
 
   infra_esxi1:    
-    fqdn:         "b34-esxi5.{{ domain }}"
-    ip:           '10.174.113.78'
-    vmotion_ip:   '172.16.221.149' 
+    fqdn:         "b35-esxi5.{{ domain }}"
+    ip:           '10.174.113.109'
+    vmotion_ip:   '172.16.221.109' 
     cluster:      "{{ infra_cluster }}" 
     ##
     vlan:         "{{ mgmt_vlan }}"
@@ -169,9 +171,9 @@ vESX:
     hdd:          "{{ hdd }}"
 
   infra_esxi2:    
-    fqdn:         "b34-esxi6.{{ domain }}"
-    ip:           '10.174.113.79'
-    vmotion_ip:   '172.16.221.150' 
+    fqdn:         "b35-esxi6.{{ domain }}"
+    ip:           '10.174.113.110'
+    vmotion_ip:   '172.16.221.110' 
     cluster:      "{{ infra_cluster }}"
     ##
     vlan:         "{{ mgmt_vlan }}"
@@ -190,8 +192,8 @@ vESX:
 nsxapp:
   user:                       "admin"
   password:                   "{{ longpass }}"
-  fqdn:                       "b34-nsxmgr.{{ domain }}"
-  ip:                         "10.174.113.70"
+  fqdn:                       "b35-nsxmgr.{{ domain }}"
+  ip:                         "10.174.113.101"
   mask:                       "{{ mask }}"
   gw:                         "{{ gw }}"
   portgroup:                  "{{ mgmt_pg }}"
@@ -214,31 +216,31 @@ TEP_Pool:
   display_name:               "TEP-Pool"
   subnets:
     - allocation_ranges:
-      - start:                "172.16.221.10"
-        end:                  "172.16.221.100"
-      gateway_ip:             "172.16.221.1"
-      cidr:                   "172.16.221.0/24"
+      - start:                "172.16.35.10"
+        end:                  "172.16.35.100"
+      gateway_ip:             "172.16.35.1"
+      cidr:                   "172.16.35.0/24"
   state:                      present
 
 
 transport_nodes: 
   edgenode_1:
-    name:                     "b34-edge1.ft.lab"
+    name:                     "b35-edge1.ft.lab"
     state:                    "present"
     uplink1:                  "link1"      
     uplink2:                  "link2"
-    ip:                       "10.174.113.72"
+    ip:                       "10.174.113.103"
     prefix_len:               "{{ prefix }}"
     gw:                       "{{ gw }}"
     host:                     "{{ vESX.infra_esxi1.fqdn }}" 
     cluster:                  "{{ vESX.infra_esxi1.cluster }}"
     storage:                  "{{ nested_datastore }}"
   edgenode_2:
-    name:                     "b34-edge2.ft.lab"
+    name:                     "b35-edge2.ft.lab"
     state:                    "present"
     uplink1:                  "link1"      
     uplink2:                  "link2"
-    ip:                       "10.174.113.73"
+    ip:                       "10.174.113.104"
     prefix_len:               "{{ prefix }}"
     gw:                       "{{ gw }}"
     host:                     "{{ vESX.infra_esxi2.fqdn }}" 

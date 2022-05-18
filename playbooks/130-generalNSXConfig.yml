@@ -47,6 +47,18 @@
       transport_zone_display_name:  "nsx-vlan-transportzone"
       state:                        "present"
 
+  - name: Create an overlay segment
+    vmware.ansible_for_nsxt.nsxt_policy_segment:
+      hostname:                     "{{ nsxapp.ip }}"
+      username:                     "{{ nsxapp.user }}"
+      password:                     "{{ nsxapp.password }}"
+      validate_certs:               False
+      display_name:                 "overlay-segment"
+      admin_state:                  "UP"
+      transport_zone_display_name:  "nsx-overlay-transportzone"
+      state:                        "present"
+
+
 
 
   - name: Create an Uplink Profile with 2 uplinks

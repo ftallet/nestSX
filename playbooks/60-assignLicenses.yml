@@ -5,22 +5,46 @@
     file:           "{{ licenses_file }}"
     name:           licenses
 
-- name: Assign vCenter license
+- name: Assign vCenter license v7
   vcenter_license:
     hostname:       "{{ vcenter.ip }}"
     username:       "{{ vcenter.user }}"
     password:       "{{ vcenter.password }}"
-    license:        "{{ licenses.vcenter }}"
+    license:        "{{ licenses.vcenter7 }}"
     state:          present
     validate_certs: False
+  when: vcenter.license == "license7"    
 
-- name: Assign license to ESXi hosts
+- name: Assign vCenter license v6
+  vcenter_license:
+    hostname:       "{{ vcenter.ip }}"
+    username:       "{{ vcenter.user }}"
+    password:       "{{ vcenter.password }}"
+    license:        "{{ licenses.vcenter7 }}"
+    state:          present
+    validate_certs: False
+  when: vcenter.license == "license6"    
+
+- name: Assign license to ESXi hosts v7
   vcenter_license:
     hostname:       "{{ vcenter.ip }}"
     username:       "{{ vcenter.user }}"
     password:       "{{ vcenter.password }}"
     esxi_hostname:  "{{ item.value.fqdn }}"
-    license:        "{{ licenses.esxi }}"
+    license:        "{{ licenses.esxi7 }}"
     state:          present
     validate_certs: False
   with_dict:        "{{ vESX }}" 
+  when: esxi_license == "license7"
+  
+- name: Assign license to ESXi hosts v6
+  vcenter_license:
+    hostname:       "{{ vcenter.ip }}"
+    username:       "{{ vcenter.user }}"
+    password:       "{{ vcenter.password }}"
+    esxi_hostname:  "{{ item.value.fqdn }}"
+    license:        "{{ licenses.esxi6 }}"
+    state:          present
+    validate_certs: False
+  with_dict:        "{{ vESX }}" 
+  when: esxi_license == "license6"

@@ -325,6 +325,23 @@
     discovery_operation: both
     state: present    
     validate_certs: False
+  when: vcenter.vds_version is not defined
+
+- name: Create VDS "{{ vcenter.vds }}" on vcenter 
+  community.vmware.vmware_dvswitch:
+    hostname: '{{ vcenter.ip }}'
+    username: '{{ vcenter.user }}'
+    password: '{{ vcenter.password }}'
+    datacenter: '{{ vcenter.dc }}'
+    switch:   "{{ vcenter.vds }}"
+    switch_version: "{{ vcenter.vds_version }}"
+    mtu:      "{{ mtu }}"
+    uplink_quantity: '2'
+    discovery_protocol: lldp
+    discovery_operation: both
+    state: present    
+    validate_certs: False
+  when: vcenter.vds_version is defined
 
 - name: Create management DVPortgroup "{{mgmt_pg}}-dvpg"
   community.vmware.vmware_dvs_portgroup:
@@ -380,7 +397,7 @@
     validate_certs: False
   with_items: "{{ vESX.values() | selectattr('cluster','==', infra_cluster ) }}"  
 - pause:
-    seconds: 5
+    seconds: 10
 
 - name: Create link1 Portgroup on vSwitch1
   vmware_portgroup:
@@ -410,7 +427,7 @@
     validate_certs: False
   with_items: "{{ vESX.values() | selectattr('cluster','==', infra_cluster ) }}"  
 - pause:
-    seconds: 5
+    seconds: 10
 
 - name: Create link2 Portgroup on vSwitch2
   vmware_portgroup:

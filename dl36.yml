@@ -1,14 +1,15 @@
-# sudo ansible-playbook lab-install.yml -e @b34.yml
-# sudo ansible-playbook nsx-install.yml -e @b34.yml
+# sudo ansible-playbook lab-install.yml -e @dl36.yml
+# sudo ansible-playbook nsx-install.yml -e @dl36.yml
 
-
+# problems: 
+# take into account VDS versions: ESXi6.7 will generate will not attach to a VDS 7.0
+# license: vSphere 6 has a different set of licenses from vSphere 7.0
 esxIso:            '/home/francois/Downloads/VMware-VMvisor-Installer-201912001-15160138.x86_64.iso'  # 6.7 hopefully
 #esxIso:           '/home/francois/Downloads/VMware-VMvisor-Installer-7.0U3d-19482537.x86_64.iso'  # vSphere 7.0u3d GA
 vcIso:            '/home/francois/Downloads/VMware-VCSA-all-7.0.3-19480866.iso'                   # 7.0u3d GA
 #nsx_ova:          '/home/francois/Downloads/nsx-unified-appliance-3.1.3.7.0.19380482.ova'         # 3.1.3.7
-nsx_ova:          '/home/francois/Downloads/nsx-unified-appliance-3.2.1.0.0.19801963.ova'         # 3.2.1 GA
-licenses_file:    '/home/francois/.licenses.yaml'  
-# need to implement a vault
+nsx_ova:          '/home/francois/Downloads/nsx-unified-appliance-3.1.3.5.0.19068437.ova'         # 3.1.3.5
+licenses_file:    '/home/francois/.licenses.yaml'                                                 # see .licenses.yaml template in "playbooks" directory
 
 
 # Global values that will be used everywhere by default
@@ -25,7 +26,7 @@ infra_vcenter:
   ## the following objects will be created if necessary
   dc:             'ft-lab'                # global datacenter name in infra_vcenter
   vds:            'LabVDS'                # VDS in infra_vcenter
-  cluster:        'b34-lab'               # the infra_vcenter cluster under which we're going to create our VMs
+  cluster:        'dl36-lab'               # the infra_vcenter cluster under which we're going to create our VMs
   allvlans_dvpg:  'AllVLANs'              # infra_vcenter trunking dvportgroup with mac learning and all vlans allowed 
 
 # site defines the local objects for the lab we're deploying on pESX
@@ -39,16 +40,16 @@ dns:              '10.114.221.134' #'10.20.145.1'
 ntp:              '10.166.17.90'
 domain:           'ft.lab'
 admin:            "administrator@{{ domain }}"
-gw:               '10.174.113.253'
-mask:             '255.255.254.0'
-prefix:           '23'              # vcsa install wants a prefix len -> this corresponds to the "mask" above
-mgmt_pg:          'b-mgmt'    # prefix name for the management pg/dvpg
-mgmt_vlan:        '1647'      # VLAN ID of management network
+gw:               '10.114.221.129'
+mask:             '255.255.255.192'
+prefix:           '26'              # vcsa install wants a prefix len -> this corresponds to the "mask" above
+mgmt_pg:          'dl-mgmt'    # prefix name for the management pg/dvpg
+mgmt_vlan:        '160'      # VLAN ID of management network
 vmotion_vlan:     '162'             # vMotion vlan and network
 vmotion_mask:     '255.255.255.0'   # defined on ESXi hosts
-vmotion_gw:       '172.16.221.129'  # does not need portgroup
-datastore:        'b34' # datastore that will be used for the lab deployment
-nested_datastore: 'b-deployed' # name of the nfs datastore mounted on the nested vESXi
+vmotion_gw:       '172.16.36.1'  # does not need portgroup
+datastore:        'dl36-ssd1' # datastore that will be used for the lab deployment
+nested_datastore: 'dl-deployed' # name of the nfs datastore mounted on the nested vESXi
 cpu_small:        '2' 
 ram_small:        '16384' 
 cpu_large:        '4' 
@@ -60,8 +61,8 @@ esxi_license:     'license6'
 
 # the physical host on which the lab will be created
 pESX: 
-  fqdn:           'b34.ft.lab'    
-  ip:             '10.172.211.38'
+  fqdn:           'dl36.ft.lab'    
+  ip:             '10.114.221.132'
   vmnic:          'vmnic1'  # vmnic for the infra_vcenter VDS
   ##
   user:           "{{ root }}" 
@@ -69,11 +70,11 @@ pESX:
 
 # the site vCenter appliance that will be deployed on pESX
 vcenter: 
-  fqdn:           "b34-vcsa.ft.lab"
-  ip:             '10.174.113.68' # site vCenter ip address 
-  vds:            'b34-vds'   # site VDS
-  vds_version:    '6.6.0' # if commented out, the VDS wersion will be the vCenter version.
-  dc:             'b34-lab'   # name of the site data center we're creating
+  fqdn:           "dl36-vcsa.ft.lab"
+  ip:             '10.114.221.138' # site vCenter ip address 
+  vds:            'vds'   # site VDS
+  vds_version:    '6.6.0' # if defined, vds version. If commented out, the VDS wersion will be the vCenter version.
+  dc:             'dl36-lab'   # name of the site data center we're creating
   license:        "license7"
   ##
   prefix:         "{{ prefix }}"
@@ -94,9 +95,9 @@ vcenter:
 
 # datastores that will be mounted on all the hosts (note: this is a list, not a dict)
 datastores:
-  - name:         'b-deployed'
-    nfs_server:   '10.174.113.250'
-    nfs_path:     '/NSBU-TKT5306355-1500GB-01/deployed'
+  - name:         'dl-deployed'
+    nfs_server:   '10.114.208.213'
+    nfs_path:     '/NSBU-TKT5463183-LAB16/deployed'
   - name:         'smurf'
     nfs_server:   '10.114.221.134'
     nfs_path:     '/nfs/export'
@@ -104,9 +105,9 @@ datastores:
 # List of virtual ESXi hosts that will be deployed
 vESX:
   esxi1:    
-    fqdn:         "b34-esxi1.{{ domain }}"
-    ip:           '10.174.113.74'
-    vmotion_ip:   '172.16.221.145' 
+    fqdn:         "dl36-esxi1.{{ domain }}"
+    ip:           '10.114.221.144'
+    vmotion_ip:   '172.16.36.44' 
     cluster:      'Compute1' 
     ##
     vlan:         "{{ mgmt_vlan }}"
@@ -117,9 +118,9 @@ vESX:
     hdd:          "{{ hdd }}"
 
   esxi2:    
-    fqdn:         "b34-esxi2.{{ domain }}"
-    ip:           '10.174.113.75'
-    vmotion_ip:   '172.16.221.146' 
+    fqdn:         "dl36-esxi2.{{ domain }}"
+    ip:           '10.114.221.145'
+    vmotion_ip:   '172.16.36.45' 
     cluster:      'Compute1' 
     ##
     vlan:         "{{ mgmt_vlan }}"
@@ -130,9 +131,9 @@ vESX:
     hdd:          "{{ hdd }}"
 
   esxi3:    
-    fqdn:         "b34-esxi3.{{ domain }}"
-    ip:           '10.174.113.76'
-    vmotion_ip:   '172.16.221.147' 
+    fqdn:         "dl36-esxi3.{{ domain }}"
+    ip:           '10.114.221.146'
+    vmotion_ip:   '172.16.36.46' 
     cluster:      'Compute2' 
     ##
     vlan:         "{{ mgmt_vlan }}"
@@ -143,9 +144,9 @@ vESX:
     hdd:          "{{ hdd }}"
 
   esxi4:    
-    fqdn:         "b34-esxi4.{{ domain }}"
-    ip:           '10.174.113.77'
-    vmotion_ip:   '172.16.221.148' 
+    fqdn:         "dl36-esxi4.{{ domain }}"
+    ip:           '10.114.221.147'
+    vmotion_ip:   '172.16.36.47' 
     cluster:      'Compute2' 
     ##
     vlan:         "{{ mgmt_vlan }}"
@@ -156,9 +157,9 @@ vESX:
     hdd:          "{{ hdd }}"
 
   infra_esxi1:    
-    fqdn:         "b34-esxi5.{{ domain }}"
-    ip:           '10.174.113.78'
-    vmotion_ip:   '172.16.221.149' 
+    fqdn:         "dl36-esxi5.{{ domain }}"
+    ip:           '10.114.221.148'
+    vmotion_ip:   '172.16.36.48' 
     cluster:      "{{ infra_cluster }}" 
     ##
     vlan:         "{{ mgmt_vlan }}"
@@ -169,9 +170,9 @@ vESX:
     hdd:          "{{ hdd }}"
 
   infra_esxi2:    
-    fqdn:         "b34-esxi6.{{ domain }}"
-    ip:           '10.174.113.79'
-    vmotion_ip:   '172.16.221.150' 
+    fqdn:         "dl36-esxi6.{{ domain }}"
+    ip:           '10.114.221.149'
+    vmotion_ip:   '172.16.36.49' 
     cluster:      "{{ infra_cluster }}"
     ##
     vlan:         "{{ mgmt_vlan }}"
@@ -190,8 +191,8 @@ vESX:
 nsxapp:
   user:                       "admin"
   password:                   "{{ longpass }}"
-  fqdn:                       "b34-nsxmgr.{{ domain }}"
-  ip:                         "10.174.113.70"
+  fqdn:                       "dl36-nsxmgr.{{ domain }}"
+  ip:                         "10.114.221.140"
   mask:                       "{{ mask }}"
   gw:                         "{{ gw }}"
   portgroup:                  "{{ mgmt_pg }}"
@@ -223,22 +224,22 @@ TEP_Pool:
 
 transport_nodes: 
   edgenode_1:
-    name:                     "b34-edge1.ft.lab"
+    name:                     "dl36-edge1.ft.lab"
     state:                    "present"
     uplink1:                  "link1"      
     uplink2:                  "link2"
-    ip:                       "10.174.113.72"
+    ip:                       "10.114.221.142"
     prefix_len:               "{{ prefix }}"
     gw:                       "{{ gw }}"
     host:                     "{{ vESX.infra_esxi1.fqdn }}" 
     cluster:                  "{{ vESX.infra_esxi1.cluster }}"
     storage:                  "{{ nested_datastore }}"
   edgenode_2:
-    name:                     "b34-edge2.ft.lab"
+    name:                     "dl36-edge2.ft.lab"
     state:                    "present"
     uplink1:                  "link1"      
     uplink2:                  "link2"
-    ip:                       "10.174.113.73"
+    ip:                       "10.114.221.143"
     prefix_len:               "{{ prefix }}"
     gw:                       "{{ gw }}"
     host:                     "{{ vESX.infra_esxi2.fqdn }}" 
