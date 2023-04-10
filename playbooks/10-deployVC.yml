@@ -17,6 +17,13 @@
     when: 
       - vcIso is search("-7.0.")
 
+  - name: Create JSON template file for VCSA 8.0 with embeded PSC
+    template: 
+      src=../templates/vCSA70_on_VC.json
+      dest=/tmp/vCSA_on_VC.json
+    when: 
+      - vcIso is search("-8.0.")
+
   - debug:
       msg: "Next step will take about 20 minutes if VC has not been previously deployed, so go grab some coffee !!!"
 
@@ -35,6 +42,14 @@
     when: vcIso is search("-7.0.")
     register: vc70deploy
     ignore_errors: True
+
+  - name: Perform VC CLI Install 80
+    command: "./vcsa-deploy install --accept-eula --no-ssl-certificate-verification /tmp/vCSA_on_VC.json"
+    args:
+      chdir: /mnt/VCSA/vcsa-cli-installer/lin64/
+    when: vcIso is search("-8.0.")
+    register: vc80deploy
+    ignore_errors: True  
 
   - name: Unmount VCSA installer
     action: mount name='/mnt/VCSA' src="{{ esxIso }}" fstype=iso9660 state=absent

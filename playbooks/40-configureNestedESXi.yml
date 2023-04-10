@@ -353,7 +353,7 @@
     vlan_id:        "{{ mgmt_vlan}}"
     switch_name:    "{{ vcenter.vds }}"
     num_ports:      120
-    portgroup_type: 'ephemeral'
+    port_binding:   'ephemeral'
     state: present
 
 - name: Create vMotion DVPortgroup "vMotion-dvpg"
@@ -366,7 +366,21 @@
     vlan_id:        "{{ vmotion_vlan}}"
     switch_name:    "{{ vcenter.vds }}"
     num_ports:      120
-    portgroup_type: 'ephemeral'
+    port_binding:   'ephemeral'
+    state: present
+
+- name: Create AllVLANs-dvpg 
+  community.vmware.vmware_dvs_portgroup:
+    hostname:       "{{ vcenter.ip }}"
+    username:       "{{ vcenter.user }}"
+    password:       "{{ vcenter.password }}"
+    validate_certs: false
+    portgroup_name: "AllVLANs-dvpg"
+    vlan_trunk:     True
+    vlan_id:        "0-4094"
+    switch_name:    "{{ vcenter.vds }}"
+    num_ports:      120
+    port_binding:   'ephemeral'
     state: present
 
 - name: "Add vESX host to the VDS {{ vcenter.vds }} in {{ vcenter.fqdn }}"

@@ -65,7 +65,7 @@
       vlan_id:                  "{{ mgmt_vlan}}"
       switch_name:              "{{ infra_vcenter.vds }}"
       num_ports:                120
-      portgroup_type:           'ephemeral'
+      port_binding:             'ephemeral'
       state:                    present
     register:                   Lab_pg
 
@@ -81,7 +81,7 @@
       vlan_id:                  "0-4094"
       switch_name:              "{{ infra_vcenter.vds }}"
       num_ports:                120
-      portgroup_type:           'ephemeral'
+      port_binding:             'ephemeral'
       mac_learning:
         allow_unicast_flooding: True
         enabled:                true

@@ -1,5 +1,5 @@
 vmaccepteula
-rootpw VMware1!m
+rootpw VMware1!
 install --firstdisk --overwritevmfs
 network --bootproto=dhcp --device=vmnic0 --addvmportgroup=0
 reboot

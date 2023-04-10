@@ -3,19 +3,19 @@
 
 # adjust esxi_license and potentially vcenter.vds_version
 #esxIso:            '/home/francois/Downloads/VMware-VMvisor-Installer-201912001-15160138.x86_64.iso'  # 6.7 hopefully
-esxIso:           '/home/francois/Downloads/VMware-VMvisor-Installer-8.0b-21203435.x86_64.iso'  # vSphere 8.0 IA
+esxIso:           '/home/francois/Downloads/VMware-VMvisor-Installer-7.0U3d-19482537.x86_64.iso'  # vSphere 7.0u3d GA
 # adjust vcenter.license according to vCenter version
-vcIso:            '/home/francois/Downloads/VMware-VCSA-all-8.0.0-21216066.iso'                   # vCenter 8.0 
+vcIso:            '/home/francois/Downloads/VMware-VCSA-all-7.0.3-19480866.iso'                   # 7.0u3d GA
 #nsx_ova:          '/home/francois/Downloads/nsx-unified-appliance-3.1.3.7.0.19380482.ova'         # 3.1.3.7
-nsx_ova:          '/home/francois/Downloads/nsx-unified-appliance-4.1.0.0.0.21332677.ova'         
-
+nsx_ova:          '/home/francois/Downloads/nsx-unified-appliance-3.2.1.0.0.19801963.ova'         # 3.2.1 GA
+#nsx_ova:          '/home/francois/Downloads/nsx-unified-appliance-4.0.1.0.0.19881499.ova'
 licenses_file:    '/home/francois/.licenses.yaml'  
 # need to implement a vault
 
 
 # Global values that will be used everywhere by default
-password:         'VMware1!m'
-longpass:         'VMware1!mVMware1!m'
+password:         'VMware1!'
+longpass:         'VMware1!VMware1!'
 root:             'root'
 
 # infrastructure vCenter : 
@@ -44,7 +44,7 @@ admin:            "administrator@{{ domain }}"
 gw:               '10.174.113.253'
 mask:             '255.255.254.0'
 prefix:           '23'              # vcsa install wants a prefix len -> this corresponds to the "mask" above
-mgmt_pg:          'b-mgmt'    # prefix name for the management pg/dvpg
+mgmt_pg:          'b-mgmt-dvpg'    # prefix name for the management pg/dvpg
 mgmt_vlan:        '1647'      # VLAN ID of management network
 vmotion_vlan:     '162'             # vMotion vlan and network
 vmotion_mask:     '255.255.255.0'   # defined on ESXi hosts
@@ -53,12 +53,12 @@ datastore:        'b34' # datastore that will be used for the lab deployment
 nested_datastore: 'b-deployed' # name of the nfs datastore mounted on the nested vESXi
 cpu_small:        '2' 
 ram_small:        '16384' 
-cpu_large:        '4' 
-ram_large:        '32768'
+cpu_large:        '8' 
+ram_large:        '65536'
 hdd:              '100' # 1 HDD 8GB by default where the ESXi  installed. Additional one is SSD emulated drive configured half of the value here, and third HDD is according the value here
 infra_cluster:    'Infra'
 mtu:              1700
-esxi_license:     'license8'
+esxi_license:     'license7'
 
 # the physical host on which the lab will be created
 pESX: 
@@ -76,7 +76,7 @@ vcenter:
   vds:            'b34-vds'   # site VDS
 #  vds_version:    '6.6.0' # if commented out, the VDS wersion will be the vCenter version.
   dc:             'b34-lab'   # name of the site data center we're creating
-  license:        "license8"
+  license:        "license7"
   ##
   prefix:         "{{ prefix }}"
   gw:             "{{ gw }}"
@@ -109,59 +109,46 @@ vESX:
     fqdn:         "b34-esxi1.{{ domain }}"
     ip:           '10.174.113.74'
     vmotion_ip:   '172.16.221.145' 
-    cluster:      'Compute1' 
+    cluster:      'MainCluster' 
     ##
     vlan:         "{{ mgmt_vlan }}"
     mask:         "{{ mask }}"
     gw:           "{{ gw }}"
-    cpu:          "{{ cpu_small }}"
-    ram:          "{{ ram_small }}" 
+    cpu:          "{{ cpu_large }}"
+    ram:          "{{ ram_large }}" 
     hdd:          "{{ hdd }}"
 
   esxi2:    
     fqdn:         "b34-esxi2.{{ domain }}"
     ip:           '10.174.113.75'
     vmotion_ip:   '172.16.221.146' 
-    cluster:      'Compute1' 
+    cluster:      'MainCluster' 
     ##
     vlan:         "{{ mgmt_vlan }}"
     mask:         "{{ mask }}"
     gw:           "{{ gw }}"
-    cpu:          "{{ cpu_small }}"
-    ram:          "{{ ram_small }}" 
+    cpu:          "{{ cpu_large }}"
+    ram:          "{{ ram_large }}" 
     hdd:          "{{ hdd }}"
 
   esxi3:    
     fqdn:         "b34-esxi3.{{ domain }}"
     ip:           '10.174.113.76'
     vmotion_ip:   '172.16.221.147' 
-    cluster:      'Compute2' 
+    cluster:      'MainCluster' 
     ##
     vlan:         "{{ mgmt_vlan }}"
     mask:         "{{ mask }}"
     gw:           "{{ gw }}"
-    cpu:          "{{ cpu_small }}"
-    ram:          "{{ ram_small }}" 
+    cpu:          "{{ cpu_large }}"
+    ram:          "{{ ram_large }}" 
     hdd:          "{{ hdd }}"
 
   esxi4:    
     fqdn:         "b34-esxi4.{{ domain }}"
     ip:           '10.174.113.77'
     vmotion_ip:   '172.16.221.148' 
-    cluster:      'Compute2' 
-    ##
-    vlan:         "{{ mgmt_vlan }}"
-    mask:         "{{ mask }}"
-    gw:           "{{ gw }}"
-    cpu:          "{{ cpu_small }}"
-    ram:          "{{ ram_small }}" 
-    hdd:          "{{ hdd }}"
-
-  infra_esxi1:    
-    fqdn:         "b34-esxi5.{{ domain }}"
-    ip:           '10.174.113.78'
-    vmotion_ip:   '172.16.221.149' 
-    cluster:      "{{ infra_cluster }}" 
+    cluster:      'MainCluster' 
     ##
     vlan:         "{{ mgmt_vlan }}"
     mask:         "{{ mask }}"
@@ -170,19 +157,7 @@ vESX:
     ram:          "{{ ram_large }}" 
     hdd:          "{{ hdd }}"
 
-  infra_esxi2:    
-    fqdn:         "b34-esxi6.{{ domain }}"
-    ip:           '10.174.113.79'
-    vmotion_ip:   '172.16.221.150' 
-    cluster:      "{{ infra_cluster }}"
-    ##
-    vlan:         "{{ mgmt_vlan }}"
-    mask:         "{{ mask }}"
-    gw:           "{{ gw }}"
-    cpu:          "{{ cpu_large }}"
-    ram:          "{{ ram_large }}" 
-    hdd:          "{{ hdd }}"
-
+ 
 ## -----------------------------------------------------------------
 ## NSX Information (probably wise to move to a different file later)
 ## -----------------------------------------------------------------
@@ -227,8 +202,8 @@ transport_nodes:
   edgenode_1:
     name:                     "b34-edge1.ft.lab"
     state:                    "present"
-    uplink1:                  "AllVLANs-dvpg"      
-    uplink2:                  "AllVLANs-dvpg"
+    uplink1:                  "link1"      
+    uplink2:                  "link2"
     ip:                       "10.174.113.72"
     prefix_len:               "{{ prefix }}"
     gw:                       "{{ gw }}"
@@ -238,8 +213,8 @@ transport_nodes:
   edgenode_2:
     name:                     "b34-edge2.ft.lab"
     state:                    "present"
-    uplink1:                  "AllVLANs-dvpg"      
-    uplink2:                  "AllVLANs-dvpg"
+    uplink1:                  "link1"      
+    uplink2:                  "link2"
     ip:                       "10.174.113.73"
     prefix_len:               "{{ prefix }}"
     gw:                       "{{ gw }}"

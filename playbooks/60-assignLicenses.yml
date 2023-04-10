@@ -5,6 +5,16 @@
     file:           "{{ licenses_file }}"
     name:           licenses
 
+- name: Assign vCenter license v8
+  vcenter_license:
+    hostname:       "{{ vcenter.ip }}"
+    username:       "{{ vcenter.user }}"
+    password:       "{{ vcenter.password }}"
+    license:        "{{ licenses.vcenter8 }}"
+    state:          present
+    validate_certs: False
+  when: vcenter.license == "license8"    
+
 - name: Assign vCenter license v7
   vcenter_license:
     hostname:       "{{ vcenter.ip }}"
@@ -36,6 +46,18 @@
     validate_certs: False
   with_dict:        "{{ vESX }}" 
   when: esxi_license == "license7"
+
+- name: Assign license to ESXi hosts v8
+  vcenter_license:
+    hostname:       "{{ vcenter.ip }}"
+    username:       "{{ vcenter.user }}"
+    password:       "{{ vcenter.password }}"
+    esxi_hostname:  "{{ item.value.fqdn }}"
+    license:        "{{ licenses.esxi8 }}"
+    state:          present
+    validate_certs: False
+  with_dict:        "{{ vESX }}" 
+  when: esxi_license == "license8"
   
 - name: Assign license to ESXi hosts v6
   vcenter_license:
