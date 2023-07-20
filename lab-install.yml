@@ -6,7 +6,7 @@
   hosts: localhost
   gather_facts: False
   tasks:
-  - import_tasks: playbooks/00-configure-lab-VDS.yml 
+#  - import_tasks: playbooks/00-configure-lab-VDS.yml 
   - import_tasks: playbooks/10-deployVC.yml
   - import_tasks: playbooks/20-prepareISOInstaller.yml
   - import_tasks: playbooks/30-deployNestedESXi.yml

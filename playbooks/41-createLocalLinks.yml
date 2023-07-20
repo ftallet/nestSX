@@ -1,0 +1,61 @@
+# the infra vESXis are configured with two VSS, each with an isolated portgroup that "looks" 
+# like a physical link: promiscuous, 9k MTU, trunking etc.
+# They will be used to attach an edge to a virtual router
+---
+- name: Create vSwitch1 vss (with no uplink)
+  community.vmware.vmware_vswitch:
+    hostname: '{{ item.fqdn }}'
+    username: '{{ root }}'
+    password: '{{ password }}'
+    switch: "vSwitch1"
+    mtu: 9000
+    validate_certs: False
+  with_items: "{{ vESX.values() | selectattr('cluster','==', infra_cluster ) }}"  
+- pause:
+    seconds: 10
+
+- name: Create link1 Portgroup on vSwitch1
+  vmware_portgroup:
+    hostname: "{{ vcenter.ip }}"
+    username: "{{ vcenter.user }}"
+    password: "{{ vcenter.password }}"
+    switch_name: "vSwitch1"
+    portgroup_name: "link1"
+    vlan_id: 4095
+    hosts: "{{ item.fqdn}}" 
+    security:
+        promiscuous_mode: true
+        mac_changes:      true
+        forged_transmits: true
+    validate_certs: False
+  with_items: "{{ vESX.values() | selectattr('cluster','==', infra_cluster ) }}"  
+- pause:
+    seconds: 5
+
+- name: Create vSwitch2 vss (with no uplink)
+  community.vmware.vmware_vswitch:
+    hostname: '{{ item.fqdn }}'
+    username: '{{ root }}'
+    password: '{{ password }}'
+    switch: "vSwitch2"
+    mtu: 9000
+    validate_certs: False
+  with_items: "{{ vESX.values() | selectattr('cluster','==', infra_cluster ) }}"  
+- pause:
+    seconds: 10
+
+- name: Create link2 Portgroup on vSwitch2
+  vmware_portgroup:
+    hostname: "{{ vcenter.ip }}"
+    username: "{{ vcenter.user }}"
+    password: "{{ vcenter.password }}"
+    switch_name: "vSwitch2"
+    portgroup_name: "link2"
+    vlan_id: 4095
+    hosts: "{{ item.fqdn}}" 
+    security:
+        promiscuous_mode: true
+        mac_changes:      true
+        forged_transmits: true
+    validate_certs: False
+  with_items: "{{ vESX.values() | selectattr('cluster','==', infra_cluster ) }}"  
